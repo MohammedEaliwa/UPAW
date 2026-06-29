@@ -1,0 +1,101 @@
+/* Home Page Custom CSS */
+
+.home-page {
+  /* Scope wrapper */
+}
+
+/* Hero Section */
+.home-hero {
+  min-height: 92vh;
+  display: flex;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+@media (max-width: 1024px) {
+  .home-hero {
+    min-height: auto;
+    padding: 100px 0 60px;
+  }
+}
+
+@media (max-width: 768px) {
+  .home-hero {
+    padding: 80px 0 40px;
+    text-align: center;
+  }
+}
+
+/* Counter & Stats styling */
+.hero-stats {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .hero-stats {
+    justify-content: center;
+    gap: 1.5rem;
+  }
+}
+
+/* Floating Card Adjustments */
+@media (max-width: 1200px) {
+  .hero-card-float {
+    display: none !important;
+  }
+}
+
+/* Section dividers & title */
+.section-title {
+  font-size: clamp(1.8rem, 3.5vw, 2.5rem);
+  font-weight: 800;
+  color: var(--text);
+}
+
+.section-tag {
+  font-weight: 700;
+}
+
+/* Responsiveness for Services, News and Important Links */
+@media (max-width: 768px) {
+  .section-title {
+    font-size: 1.7rem;
+  }
+  
+  /* Stacking columns */
+  .row.g-4 > div {
+    width: 100% !important;
+  }
+  
+  /* Buttons align center on mobile */
+  .d-flex.flex-wrap.gap-3.mb-5 {
+    justify-content: center;
+  }
+
+  .d-flex.flex-wrap.align-items-end.justify-content-between {
+    justify-content: center !important;
+    text-align: center;
+  }
+  
+  /* Center filter buttons */
+  .d-flex.align-items-center.gap-2.flex-wrap {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-title {
+    font-size: 1.8rem !important;
+  }
+  
+  .hero-subtitle {
+    font-size: 0.9rem !important;
+  }
+  
+  .hero-stat-num {
+    font-size: 1.8rem !important;
+  }
+}

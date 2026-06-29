@@ -1,0 +1,4 @@
+.sidebar-fixed {
+  width: 280px;
+  flex-shrink: 0;
+}

@@ -1,0 +1,20 @@
+- [x] Fix boundary polygon click interception in `ManageMap.jsx`
+- [x] Fetch all locations (approved and unapproved) in `ManageMap.jsx` and display creator name and status in the table
+- [x] Implement Review Modal in `ManageMap.jsx` (triggered by `review` search param or clicking review on pending points)
+- [x] Add branch details display in `UserManagement.jsx`
+- [x] Add tab system and project-submission Map to `InternalNews.jsx` for employees
+- [x] Fix map page crash for employees on `InternalNews.jsx` (remove undefined `mapSuccessMsg` alert)
+- [x] Update NotificationDropdown.jsx clear-all button to use `FaTrash` icon next to the "Read All" button with an updated Arabic tooltip
+- [x] Make notification read/delete states user-specific (independent per user) via `user_notifications` bridge table
+- [x] Update leadership section on the About page with Dr. Ahmed Al-Toumi, Director of the Authority, and his uploaded image
+- [x] Replace resultModal success/error popups with beautiful, animated ToastNotification messages at the bottom-left of the screen in InternalNews.jsx, ManageMap.jsx, and UserManagement.jsx
+- [x] Allow administrators (المسؤول) to edit already approved points on the map page, with a dedicated blue Edit ("تعديل") button, customized modal title, and specific footer buttons
+- [x] Style ToastNotification with the website's brand-aligned blue color
+- [x] Intercept and replace browser alerts and local Alert banners with the global blue ToastNotification system for all operations in the dashboard (both employee and manager pages)
+- [x] Verify everything compiles and works correctly
+- [x] Implement "رفض وإعادة دراسة المعلم" workflow (admin opens reason modal → sends notification to employee → employee edits and resubmits or cancels)
+- [x] Fix links in dynamic pages (DynamicPage.jsx) to navigate locally instead of external upa.gov.ly links
+- [x] Add الجيل الأول/الثاني/الثالث dropdown under المخططات in Navbar
+- [x] Create ManageAbout page (نبذة عن الهيئة) in dashboard with rich text editor + tasks/leadership tabs
+- [x] Add about page to sidebar with proper route /dashboard/manage-about
+- [x] Populate the About page in DB with rich content about the authority

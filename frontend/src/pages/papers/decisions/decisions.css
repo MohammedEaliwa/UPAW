@@ -1,0 +1,20 @@
+/* decisions.css */
+
+/* Glassmorphism card background */
+.decisions-card {
+  backdrop-filter: blur(8px);
+  background: rgba(255,255,255,0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.decisions-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0,48,135,0.12);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .decisions-card {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+}

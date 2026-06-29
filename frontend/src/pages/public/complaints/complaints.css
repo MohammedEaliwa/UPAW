@@ -1,0 +1,90 @@
+/* Complaints Page Styles */
+
+.complaints-page {
+  /* Scope wrapper */
+}
+
+/* Header */
+.complaints-header {
+  background: linear-gradient(135deg, #001225 0%, #001d5a 50%, #003087 100%);
+  padding: 70px 0 50px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Sidebar info card */
+.complaints-info-card {
+  background: linear-gradient(135deg, #001d5a 0%, #003087 60%, #0066cc 100%);
+  border-radius: 24px;
+  padding: 40px 35px;
+  margin-bottom: 1.5rem;
+}
+
+/* Guidelines card */
+.complaints-guidelines-card {
+  background: var(--card-bg);
+  border-radius: 20px;
+  padding: 28px 30px;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 20px rgba(0,48,135,0.06);
+}
+
+/* Form card */
+.complaints-form-card {
+  background: var(--card-bg);
+  border-radius: 24px;
+  padding: 40px 40px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .complaints-header {
+    padding: 50px 0 35px;
+    text-align: center;
+  }
+  
+  .complaints-info-card {
+    padding: 25px 20px;
+  }
+  
+  .complaints-guidelines-card {
+    padding: 20px;
+  }
+  
+  .complaints-form-card {
+    padding: 25px 20px;
+  }
+  
+  /* Flex grid stack */
+  .complaints-page .row.g-5 {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* Show info & guidelines first, then form */
+  .complaints-page .row.g-5 > div:nth-child(1) {
+    order: 1;
+    width: 100% !important;
+  }
+  
+  .complaints-page .row.g-5 > div:nth-child(2) {
+    order: 2;
+    width: 100% !important;
+  }
+  
+  /* Stack form fields in row */
+  .complaints-page form .row.g-3 > div {
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .complaints-header h1 {
+    font-size: 1.8rem !important;
+  }
+  .complaints-header p {
+    font-size: 0.95rem !important;
+  }
+}

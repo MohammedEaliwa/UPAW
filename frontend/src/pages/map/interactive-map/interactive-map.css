@@ -1,0 +1,113 @@
+/* InteractiveMap Custom CSS */
+
+.interactive-map-page {
+  /* Scope wrapper */
+}
+
+/* Header section responsive styles */
+.map-header {
+  background: linear-gradient(135deg, #001d5a 0%, #003087 60%, #0066cc 100%);
+  padding: 70px 0 50px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Sidebar container */
+.map-sidebar {
+  background: var(--card-bg);
+  border-radius: 20px;
+  padding: 25px;
+  box-shadow: 0 10px 40px rgba(0,48,135,0.1);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  height: 550px;
+}
+
+/* Leaflet Map wrapper container */
+.map-wrapper {
+  height: 550px;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0,48,135,0.12);
+  border: 1px solid var(--border);
+  position: relative;
+  background: var(--card-bg);
+}
+
+.map-custom-marker:hover {
+  transform: scale(1.15);
+}
+
+/* Responsive Styles */
+@media (max-width: 992px) {
+  .map-sidebar {
+    height: 450px;
+  }
+  
+  .map-wrapper {
+    height: 450px;
+  }
+}
+
+@media (max-width: 768px) {
+  .map-header {
+    padding: 50px 0 35px;
+    text-align: center;
+  }
+  
+  /* Flex row layout becomes column */
+  .interactive-map-page .row.gy-4 {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* Sidebar above the map */
+  .interactive-map-page .row.gy-4 > div:nth-child(1) {
+    order: 1;
+    width: 100% !important;
+  }
+  .interactive-map-page .row.gy-4 > div:nth-child(2) {
+    order: 2;
+    width: 100% !important;
+  }
+  
+  .map-sidebar {
+    height: auto;
+    max-height: 400px;
+  }
+  
+  .map-wrapper {
+    height: 350px;
+  }
+  
+  /* Categories scroll horizontally */
+  .map-sidebar .d-flex.gap-1.mb-3 {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    justify-content: flex-start;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .map-sidebar .d-flex.gap-1.mb-3 button {
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 480px) {
+  .map-header h1 {
+    font-size: 1.8rem !important;
+  }
+  .map-header p {
+    font-size: 0.95rem !important;
+  }
+  
+  .map-sidebar {
+    max-height: 320px;
+  }
+  
+  .map-wrapper {
+    height: 300px;
+  }
+}

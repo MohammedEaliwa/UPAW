@@ -1,0 +1,43 @@
+/* Error 404 Page CSS */
+
+.error404-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #001225 0%, #001d5a 40%, #003087 100%);
+  padding: 20px;
+  direction: rtl;
+}
+
+.error404-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  color: #003087;
+  padding: 12px 30px;
+  borderRadius: 99px;
+  font-weight: 800;
+  text-decoration: none;
+  font-size: 1.1rem;
+  box-shadow: 0 4px 15px rgba(255,255,255,0.2);
+  transition: all 0.3s;
+}
+
+.error404-btn:hover {
+  transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+  .error404-page h1 {
+    font-size: 3rem !important;
+  }
+  .error404-page h3 {
+    font-size: 1.3rem !important;
+  }
+  .error404-page p {
+    font-size: 0.95rem !important;
+    margin-bottom: 2rem !important;
+  }
+}

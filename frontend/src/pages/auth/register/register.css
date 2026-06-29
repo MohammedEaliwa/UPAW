@@ -1,0 +1,38 @@
+/* Register Page Styles */
+
+.auth-page {
+  /* Inherits GeometricBackground from App level, so we just set padding/min-height */
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Card for register form */
+.auth-card {
+  background: var(--card-bg);
+  border-radius: 24px;
+  padding: 40px;
+  box-shadow: 0 15px 50px rgba(0,48,135,0.15);
+  border: 1px solid var(--border);
+  position: relative;
+  z-index: 2;
+}
+
+@media (max-width: 768px) {
+  .auth-card {
+    padding: 30px 20px;
+    border-radius: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 25px 15px;
+  }
+  
+  .auth-card h4 {
+    font-size: 1.3rem !important;
+  }
+}

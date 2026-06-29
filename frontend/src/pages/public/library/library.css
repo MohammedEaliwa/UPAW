@@ -1,0 +1,150 @@
+/* Library Page CSS */
+
+.library-page {
+  position: relative;
+  overflow: hidden;
+  transition: background 0.3s ease;
+}
+
+/* Badge at top */
+.library-badge-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 8px 24px;
+  border-radius: 50px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(5px);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.library-badge-wrapper .badge-icon {
+  font-size: 1.1rem;
+  color: #fff;
+}
+
+/* Main title */
+.library-main-title {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 15px;
+  letter-spacing: -0.5px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+}
+
+.library-subtitle {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: clamp(0.95rem, 2.5vw, 1.15rem);
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* Table Container with Glassmorphism */
+.library-table-container {
+  background: rgba(25, 35, 65, 0.45);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  margin-top: 20px;
+}
+
+/* For Light Theme integration */
+body:not(.dark-mode) .library-table-container {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 48, 135, 0.1);
+  box-shadow: 0 15px 40px rgba(0, 48, 135, 0.12);
+}
+
+/* Loading state */
+.library-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 0;
+  color: #fff;
+  gap: 15px;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+body:not(.dark-mode) .library-loading {
+  color: #003087;
+}
+
+.spinner-icon.spinning {
+  font-size: 2.5rem;
+  animation: spin 1.2s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* DataTable Component Customizations inside Library Page */
+.library-page .dt-root {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Badge for Serial Numbers */
+.serial-badge {
+  display: inline-block;
+  background: rgba(0, 102, 204, 0.15);
+  color: #0088ff;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 102, 204, 0.25);
+  font-family: monospace;
+  font-size: 0.95rem;
+}
+
+body:not(.dark-mode) .serial-badge {
+  background: rgba(0, 48, 135, 0.06);
+  color: #003087;
+  border-color: rgba(0, 48, 135, 0.15);
+}
+
+.book-title-cell {
+  color: #fff;
+  font-weight: 500;
+  font-size: 1rem;
+  line-height: 1.5;
+  display: block;
+}
+
+body:not(.dark-mode) .book-title-cell {
+  color: #111;
+}
+
+/* Custom transitions and hover states for table rows */
+.library-page table tr {
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.library-page table tr:hover {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+}
+
+body:not(.dark-mode) .library-page table tr:hover {
+  background-color: rgba(0, 48, 135, 0.02) !important;
+}
+
+/* Responsive adjustment */
+@media (max-width: 768px) {
+  .library-table-container {
+    padding: 15px;
+    border-radius: 12px;
+  }
+}

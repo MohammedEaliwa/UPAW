@@ -1,0 +1,103 @@
+/* WorkingPapers CSS */
+
+.working-papers-page {
+  /* Scope wrapper */
+}
+
+/* Header section responsive styles */
+.papers-header {
+  background: 'linear-gradient(135deg, #001225 0%, #001d5a 50%, #003087 100%)';
+  padding: 70px 0 50px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Filter Card */
+.papers-filter-card {
+  background: var(--card-bg);
+  border-radius: 20px;
+  padding: 25px 30px;
+  box-shadow: 0 10px 40px rgba(0,48,135,0.12);
+  border: 1px solid var(--border);
+  margin-bottom: 2.5rem;
+  margin-top: 50px;
+}
+
+/* Filter buttons flex */
+.papers-filter-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Responsive grid table */
+@media (max-width: 768px) {
+  .papers-header {
+    padding: 50px 0 35px;
+    text-align: center;
+  }
+  
+  .papers-filter-card {
+    padding: 20px 15px;
+    margin-top: 30px;
+  }
+
+  /* Stack search & filter horizontally to vertical */
+  .papers-filter-card .row.g-3 {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .papers-filter-card .row.g-3 > div {
+    width: 100% !important;
+  }
+  
+  /* Filter chips scroll horizontally */
+  .papers-filter-buttons {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    justify-content: flex-start;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .papers-filter-buttons button {
+    white-space: nowrap;
+  }
+
+  /* Stack card contents on mobile */
+  .papers-row-card {
+    flex-direction: column !important;
+    gap: 14px !important;
+    padding: 20px !important;
+    align-items: stretch !important;
+  }
+  
+  /* Order elements for mobile */
+  .papers-row-card > div.order-1 {
+    order: 1 !important; /* Icon first */
+  }
+  .papers-row-card > div.order-2 {
+    order: 2 !important; /* Text second */
+    text-align: center !important;
+  }
+  .papers-row-card > div.order-3 {
+    order: 3 !important; /* Download button third */
+    width: 100% !important;
+  }
+  
+  .papers-row-card .d-flex.flex-wrap.align-items-center {
+    justify-content: center !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .papers-header h1 {
+    font-size: 1.8rem !important;
+  }
+  .papers-header p {
+    font-size: 0.95rem !important;
+  }
+}

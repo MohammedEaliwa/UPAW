@@ -1,0 +1,948 @@
+/* ============================================================
+   about.css  –  Styles for the About page
+   Arabic RTL-aware | Responsive: 1024px / 768px / 480px
+   ============================================================ */
+
+/* ─── Root Wrapper ──────────────────────────────────────────── */
+.about-page {
+  padding-bottom: 80px;
+}
+
+/* ─── Hero Section ──────────────────────────────────────────── */
+.about-page .about-hero {
+  background: linear-gradient(135deg, #001225 0%, #001d5a 40%, #003087 80%, #0066cc 100%);
+  padding: 80px 0 60px;
+  position: relative;
+  overflow: hidden;
+}
+
+.about-page .about-hero__blob {
+  position: absolute;
+  top: -100px;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(0, 168, 232, 0.1) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.about-page .about-hero__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 5px 16px;
+  border-radius: 99px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.about-page .about-hero__title {
+  color: #fff;
+  font-weight: 900;
+  font-size: clamp(2rem, 4vw, 3rem);
+  margin-bottom: 0.75rem;
+  line-height: 1.3;
+}
+
+.about-page .about-hero__subtitle {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 1.1rem;
+  max-width: 650px;
+  line-height: 1.75;
+}
+
+/* ─── Main Container ────────────────────────────────────────── */
+.about-page .about-container {
+  margin-top: 60px;
+}
+
+/* ─── Intro Content Card ────────────────────────────────────── */
+.about-page .about-intro-card {
+  font-size: 1.05rem;
+  line-height: 1.8;
+  color: var(--text);
+}
+
+/* ─── Section Headers (shared) ─────────────────────────────── */
+.about-page .about-section-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+/* ─── Tasks Section ─────────────────────────────────────────── */
+.about-page .about-tasks-section {
+  margin-bottom: 4rem;
+}
+
+.about-page .about-task-card {
+  display: flex;
+  gap: 16px;
+  padding: 20px 22px;
+  background: var(--card-bg);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  height: 100%;
+  flex-direction: row;
+}
+
+.about-page .about-task-icon {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(0, 48, 135, 0.08), rgba(0, 168, 232, 0.08));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  font-size: 1.1rem;
+}
+
+.about-page .about-task-title {
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 0.4rem;
+}
+
+.about-page .about-task-desc {
+  color: var(--text-muted);
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.65;
+}
+
+/* ─── Leadership Tree Section ───────────────────────────────── */
+.about-page .about-leadership-section {
+  margin-bottom: 5rem;
+  direction: rtl;
+}
+
+/* ── Desktop Tree Container (sticky scroll) ─────────────────── */
+.about-page .about-tree-scroll-container {
+  position: relative;
+  height: 200vh;
+  margin-top: 30px;
+}
+
+.about-page .about-tree-sticky {
+  position: sticky;
+  top: 90px;
+  height: 80vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  overflow: hidden;
+  padding: 20px 0;
+}
+
+/* ── President Card ─────────────────────────────────────────── */
+.about-page .about-president-card {
+  background: var(--card-bg);
+  border-radius: 22px;
+  border: 2px solid var(--primary);
+  box-shadow: 0 8px 32px rgba(0, 48, 135, 0.18);
+  overflow: hidden;
+  width: 240px;
+  flex-shrink: 0;
+  text-align: center;
+  position: relative;
+  z-index: 10;
+}
+
+.about-page .about-president-card__photo {
+  width: 100%;
+  height: 220px;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #001225 0%, #003087 100%);
+}
+
+.about-page .about-president-card__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+
+.about-page .about-president-card__overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 20, 70, 0.6) 0%, transparent 55%);
+}
+
+.about-page .about-president-card__info {
+  padding: 16px 16px 20px;
+  background: var(--card-bg);
+}
+
+.about-page .about-president-card__name {
+  font-weight: 900;
+  color: var(--text);
+  margin: 0 0 8px;
+  font-size: 1.08rem;
+}
+
+.about-page .about-president-card__title-badge {
+  background: linear-gradient(135deg, #003087 0%, #0066cc 100%);
+  color: #fff;
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 5px 16px;
+  border-radius: 99px;
+  display: inline-block;
+}
+
+/* ── SVG Branch Connector ───────────────────────────────────── */
+.about-page .about-tree-connector {
+  width: 100%;
+  height: 32px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* ── Section Level Header (Offices / Admins) ────────────────── */
+.about-page .about-tree-level-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.about-page .about-tree-level-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.about-page .about-tree-level-icon--offices {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.35);
+}
+
+.about-page .about-tree-level-icon--admins {
+  background: linear-gradient(135deg, #003087 0%, #001d5a 100%);
+  box-shadow: 0 4px 12px rgba(0, 48, 135, 0.35);
+}
+
+.about-page .about-tree-level-name {
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.about-page .about-tree-level-name--offices {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.about-page .about-tree-level-name--admins {
+  background: linear-gradient(135deg, #003087 0%, #001d5a 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.about-page .about-tree-level-count {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.about-page .about-tree-level-divider--offices {
+  height: 2px;
+  flex: 2;
+  background: linear-gradient(90deg, rgba(14, 165, 233, 0.4) 0%, transparent 100%);
+  border-radius: 99px;
+}
+
+.about-page .about-tree-level-divider--admins {
+  height: 2px;
+  flex: 2;
+  background: linear-gradient(90deg, rgba(0, 48, 135, 0.4) 0%, transparent 100%);
+  border-radius: 99px;
+}
+
+/* ── Tree Node Card ─────────────────────────────────────────── */
+.about-page .about-tree-node-card {
+  background: var(--card-bg);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  transition: box-shadow 0.25s, transform 0.25s;
+  cursor: default;
+  position: relative;
+}
+
+.about-page .about-tree-node-card__side-bar {
+  width: 4px;
+  flex-shrink: 0;
+}
+
+.about-page .about-tree-node-card__avatar-wrap {
+  width: 68px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 10px;
+}
+
+.about-page .about-tree-node-card__avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.about-page .about-tree-node-card__content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.about-page .about-tree-node-card__badge {
+  position: absolute;
+  top: 8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Mobile Org Chart ───────────────────────────────────────── */
+.about-page .about-mobile-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 1rem;
+  padding: 0 8px;
+}
+
+.about-page .about-mobile-tab-btn {
+  border-radius: 99px !important;
+  padding: 8px 16px;
+  font-weight: 700;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* ─── Dynamic Section: text_image ───────────────────────────── */
+.about-page .about-text-image-section {
+  margin-bottom: 3rem;
+}
+
+.about-page .about-text-image-section__text h3 {
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 1.25rem;
+}
+
+.about-page .about-text-image-section__text p,
+.about-page .about-text-image-section__text div {
+  color: var(--text-muted);
+  font-size: 1.02rem;
+  line-height: 1.8;
+}
+
+.about-page .about-text-image-section__img-wrap {
+  position: relative;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border);
+  height: 320px;
+}
+
+.about-page .about-text-image-section__img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.about-page .about-text-image-section__placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text-muted);
+}
+
+/* ─── Dynamic Section: cards_grid ──────────────────────────── */
+.about-page .about-cards-grid-item {
+  display: flex;
+  gap: 16px;
+  padding: 20px 22px;
+  background: var(--card-bg);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  height: 100%;
+}
+
+.about-page .about-cards-grid-icon {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(0, 48, 135, 0.08), rgba(0, 168, 232, 0.08));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  font-size: 1.1rem;
+}
+
+/* ─── Dynamic Section: info_banner ─────────────────────────── */
+.about-page .about-info-banner {
+  border-radius: 24px;
+  padding: 50px 40px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  margin-bottom: 3rem;
+}
+
+.about-page .about-info-banner__blob {
+  position: absolute;
+  top: -50px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.about-page .about-info-banner__title {
+  color: #fff;
+  font-weight: 800;
+  margin-bottom: 0.75rem;
+}
+
+.about-page .about-info-banner__desc {
+  color: rgba(255, 255, 255, 0.75);
+  margin-bottom: 2rem;
+  font-size: 1rem;
+  max-width: 680px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.about-page .about-info-banner__btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+  color: #fff;
+  padding: 10px 24px;
+  border-radius: 99px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+}
+
+/* ─── Dynamic Section: stats_grid ──────────────────────────── */
+.about-page .about-stats-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 24px 16px;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.about-page .about-stats-card__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 99px;
+  background: rgba(0, 48, 135, 0.06);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  margin-bottom: 12px;
+}
+
+.about-page .about-stats-card__value {
+  font-size: 1.85rem;
+  font-weight: 900;
+  color: var(--primary);
+  margin: 0 0 4px;
+}
+
+.about-page .about-stats-card__label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+/* ─── CTA Section ───────────────────────────────────────────── */
+.about-page .about-cta {
+  background: linear-gradient(135deg, #001d5a 0%, #003087 60%, #0066cc 100%);
+  border-radius: 24px;
+  padding: 50px 40px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.about-page .about-cta__blob {
+  position: absolute;
+  top: -50px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(0, 168, 232, 0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.about-page .about-cta__title {
+  color: #fff;
+  font-weight: 800;
+  margin-bottom: 0.75rem;
+}
+
+.about-page .about-cta__desc {
+  color: rgba(255, 255, 255, 0.75);
+  margin-bottom: 2rem;
+  font-size: 1rem;
+}
+
+.about-page .about-cta__btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+/* ─── Profile Card Section ──────────────────────────────────── */
+.about-page .about-profile-card {
+  max-width: 450px;
+  border: 1px solid var(--border);
+}
+
+.about-page .about-profile-card__photo {
+  height: 260px;
+  overflow: hidden;
+  position: relative;
+  background: #eee;
+}
+
+.about-page .about-profile-card__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.about-page .about-profile-card__overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 29, 90, 0.85) 0%, transparent 60%);
+}
+
+.about-page .about-profile-card__name {
+  position: absolute;
+  bottom: 15px;
+  left: 0;
+  right: 0;
+  color: #fff;
+  font-weight: 800;
+  margin: 0;
+  text-align: center;
+}
+
+.about-page .about-profile-card__title-badge {
+  background: rgba(0, 48, 135, 0.08);
+  color: var(--primary);
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 5px 15px;
+  border-radius: 99px;
+  border: 1px solid rgba(0, 48, 135, 0.15);
+}
+
+/* ─── Dynamic Sections Wrapper ──────────────────────────────── */
+.about-page .dynamic-sections {
+  margin-bottom: 3rem;
+}
+
+/* ─── Scrollbar for admin rows ──────────────────────────────── */
+.about-page .about-admin-scroll {
+  max-height: 50vh;
+  overflow-y: auto;
+  padding: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary) transparent;
+}
+
+.about-page .about-admin-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.about-page .about-admin-scroll::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 4px;
+}
+
+/* ================================================================
+   RESPONSIVE — Tablet  (max-width: 1024px)
+   ================================================================ */
+@media (max-width: 1024px) {
+  .about-page .about-hero {
+    padding: 60px 0 40px;
+  }
+
+  .about-page .about-hero__title {
+    font-size: clamp(1.8rem, 4vw, 2.5rem);
+  }
+
+  .about-page .about-hero__subtitle {
+    font-size: 1rem;
+  }
+
+  .about-page .about-president-card {
+    width: 210px;
+  }
+
+  .about-page .about-president-card__photo {
+    height: 190px;
+  }
+
+  .about-page .about-cta {
+    padding: 40px 28px;
+  }
+
+  .about-page .about-info-banner {
+    padding: 40px 28px;
+  }
+
+  .about-page .about-stats-card__value {
+    font-size: 1.6rem;
+  }
+}
+
+/* ================================================================
+   RESPONSIVE — Mobile  (max-width: 768px)
+   ================================================================ */
+@media (max-width: 768px) {
+
+  /* Hero */
+  .about-page .about-hero {
+    padding: 50px 0 30px;
+  }
+
+  .about-page .about-hero__title {
+    font-size: clamp(1.4rem, 4vw, 1.8rem);
+  }
+
+  .about-page .about-hero__subtitle {
+    font-size: 0.95rem;
+    max-width: 100%;
+  }
+
+  .about-page .about-hero__badge {
+    font-size: 0.78rem;
+    padding: 4px 12px;
+  }
+
+  /* Container */
+  .about-page .about-container {
+    margin-top: 36px;
+  }
+
+  /* Intro card */
+  .about-page .about-intro-card {
+    font-size: 0.97rem;
+    padding: 1.25rem !important;
+  }
+
+  /* text_image: stack columns */
+  .about-page .about-text-image-section__img-wrap {
+    height: 220px;
+    border-radius: 16px;
+  }
+
+  /* info_banner */
+  .about-page .about-info-banner {
+    padding: 32px 20px;
+    border-radius: 16px;
+  }
+
+  .about-page .about-info-banner__desc {
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+  }
+
+  /* stats_grid */
+  .about-page .about-stats-card {
+    padding: 18px 10px;
+  }
+
+  .about-page .about-stats-card__value {
+    font-size: 1.45rem;
+  }
+
+  .about-page .about-stats-card__label {
+    font-size: 0.78rem;
+  }
+
+  /* Leadership section */
+  .about-page .about-leadership-section {
+    margin-bottom: 3rem;
+  }
+
+  /* President card on mobile */
+  .about-page .about-president-card {
+    width: 180px;
+  }
+
+  .about-page .about-president-card__photo {
+    height: 160px;
+  }
+
+  .about-page .about-president-card__name {
+    font-size: 0.95rem;
+  }
+
+  .about-page .about-president-card__title-badge {
+    font-size: 0.68rem;
+    padding: 4px 10px;
+  }
+
+  /* Mobile tabs */
+  .about-page .about-mobile-tabs {
+    gap: 6px;
+    padding: 0 4px;
+  }
+
+  .about-page .about-mobile-tab-btn {
+    font-size: 0.82rem;
+    padding: 7px 10px;
+  }
+
+  /* Tree node cards on mobile */
+  .about-page .about-tree-node-card__avatar-wrap {
+    width: 54px;
+  }
+
+  .about-page .about-tree-node-card__avatar {
+    width: 36px;
+    height: 36px;
+  }
+
+  /* CTA */
+  .about-page .about-cta {
+    padding: 32px 20px;
+    border-radius: 16px;
+  }
+
+  .about-page .about-cta__title {
+    font-size: 1.2rem;
+  }
+
+  .about-page .about-cta__desc {
+    font-size: 0.92rem;
+    margin-bottom: 1.5rem;
+  }
+
+  /* Profile card */
+  .about-page .about-profile-card {
+    max-width: 100%;
+  }
+
+  .about-page .about-profile-card__photo {
+    height: 210px;
+  }
+
+  /* General padding */
+  .about-page {
+    padding-bottom: 50px;
+  }
+}
+
+/* ================================================================
+   RESPONSIVE — Small mobile  (max-width: 480px)
+   ================================================================ */
+@media (max-width: 480px) {
+
+  /* Hero */
+  .about-page .about-hero {
+    padding: 40px 0 24px;
+  }
+
+  .about-page .about-hero__title {
+    font-size: clamp(1.3rem, 5vw, 1.6rem);
+  }
+
+  .about-page .about-hero__subtitle {
+    font-size: 0.88rem;
+  }
+
+  .about-page .about-container {
+    margin-top: 24px;
+  }
+
+  /* Task cards */
+  .about-page .about-task-card {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .about-page .about-task-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+
+  /* cards_grid items */
+  .about-page .about-cards-grid-item {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .about-page .about-cards-grid-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+
+  /* President card */
+  .about-page .about-president-card {
+    width: 155px;
+  }
+
+  .about-page .about-president-card__photo {
+    height: 140px;
+  }
+
+  .about-page .about-president-card__name {
+    font-size: 0.85rem;
+  }
+
+  /* Mobile tabs */
+  .about-page .about-mobile-tab-btn {
+    font-size: 0.75rem;
+    padding: 6px 8px;
+    gap: 4px;
+  }
+
+  /* Stats */
+  .about-page .about-stats-card__value {
+    font-size: 1.25rem;
+  }
+
+  .about-page .about-stats-card__icon {
+    width: 36px;
+    height: 36px;
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+  }
+
+  /* info banner */
+  .about-page .about-info-banner {
+    padding: 24px 14px;
+  }
+
+  /* CTA */
+  .about-page .about-cta {
+    padding: 24px 14px;
+  }
+
+  /* Tree node card micro */
+  .about-page .about-tree-node-card__avatar-wrap {
+    width: 46px;
+    padding: 8px 6px;
+  }
+
+  .about-page .about-tree-node-card__avatar {
+    width: 30px;
+    height: 30px;
+  }
+
+  /* text+image */
+  .about-page .about-text-image-section__img-wrap {
+    height: 175px;
+  }
+
+  /* Section title */
+  .about-page .section-title {
+    font-size: 1.4rem;
+  }
+}
+
+/* ================================================================
+   RTL divider direction utilities
+   ================================================================ */
+[dir="rtl"] .about-page .about-tree-level-divider--offices {
+  background-image: linear-gradient(270deg, rgba(14, 165, 233, 0.4) 0%, transparent 100%);
+}
+
+[dir="rtl"] .about-page .about-tree-level-divider--admins {
+  background-image: linear-gradient(270deg, rgba(0, 48, 135, 0.4) 0%, transparent 100%);
+}
+
+/* ================================================================
+   Extra-small screens (max-width: 380px)
+   ================================================================ */
+@media (max-width: 380px) {
+  .about-page .about-mobile-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .about-page .about-mobile-tab-btn {
+    flex-shrink: 0;
+    min-width: 130px;
+  }
+
+  .about-page .about-hero__title {
+    font-size: 1.25rem;
+  }
+
+  .about-page .about-cta {
+    padding: 20px 12px;
+  }
+
+  .about-page .about-info-banner {
+    padding: 20px 12px;
+  }
+}

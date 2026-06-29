@@ -1,0 +1,39 @@
+/* Gallery Page CSS */
+
+.gallery-page {
+  /* Scope wrapper */
+}
+
+/* Gallery layout config */
+.gallery-grid {
+  columns: 3;
+  column-gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .gallery-grid {
+    columns: 2;
+  }
+}
+
+@media (max-width: 580px) {
+  .gallery-grid {
+    columns: 1;
+  }
+}
+
+/* Search bar styling */
+.gallery-search-wrap {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .gallery-search-wrap > div {
+    width: 100% !important;
+  }
+}

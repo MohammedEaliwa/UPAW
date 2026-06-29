@@ -1,0 +1,90 @@
+/* News Page Styles */
+
+.news-page {
+  /* Scope wrapper */
+}
+
+/* News header responsive */
+.news-header {
+  background: linear-gradient(135deg, #001225 0%, #001d5a 50%, #003087 100%);
+  padding: 70px 0 50px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* News filter bar (card) */
+.news-filter-card {
+  background: var(--card-bg);
+  border-radius: 20px;
+  padding: 25px 30px;
+  box-shadow: 0 10px 40px rgba(0,48,135,0.12);
+  border: 1px solid var(--border);
+  margin-bottom: 2.5rem;
+  margin-top: 50px;
+}
+
+/* Filter buttons list */
+.news-filter-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Responsive layout adjustments */
+@media (max-width: 992px) {
+  .news-card {
+    flex-direction: column !important;
+  }
+  
+  .news-card > div:first-child {
+    width: 100% !important;
+    height: 220px !important;
+    min-height: auto !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .news-header {
+    padding: 50px 0 35px;
+    text-align: center;
+  }
+  
+  .news-filter-card {
+    padding: 20px 15px;
+    margin-top: 30px;
+  }
+  
+  /* Filter bar inputs go stacked on mobile */
+  .news-filter-card .row.g-3 {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .news-filter-card .row.g-3 > div {
+    width: 100% !important;
+  }
+  
+  /* News category chips scroll horizontally on small screen */
+  .news-filter-buttons {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    justify-content: flex-start;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .news-filter-buttons button {
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 480px) {
+  .news-header h1 {
+    font-size: 1.8rem !important;
+  }
+  .news-header p {
+    font-size: 0.95rem !important;
+  }
+}

@@ -10,16 +10,7 @@ import { useLanguage } from '../../../context/LanguageContext';
 import { api } from '../../../services/api';
 import PrimaryButton from '../../../components/ui/PrimaryButton';
 import ModernModal from '../../../components/ModernModal';
-const NEWS_CAT_MAP_EN = {
-  'الكل': 'All',
-  'إداري': 'Administration',
-  'أخبار الإدارة': 'Administration',
-  'أخبار داخلية': 'Internal News',
-  'فني': 'Technical',
-  'أخبار فنية': 'Technical',
-  'أخبار الهيئة': 'Authority News',
-  'إعلانات': 'Announcements',
-};
+import './news.css';
 
 // KML to GeoJSON parser helper
 const parseKmlToGeoJson = (kmlString) => {
@@ -292,12 +283,8 @@ const News = () => {
         ) : (
           <Row className="g-4">
             {filtered.map((news, idx) => {
-              const title = isRtl
-                ? (news.title_ar || news.title || '')
-                : (news.title_en || news.title_ar || news.title || '');
-              const excerpt = isRtl
-                ? (news.excerpt_ar || (news.content_ar ? news.content_ar.replace(/<[^>]+>/g, '').substring(0, 150) + '...' : ''))
-                : (news.excerpt_en || news.excerpt_ar || (news.content_en ? news.content_en.replace(/<[^>]+>/g, '').substring(0, 150) + '...' : ''));
+              const title = isRtl ? (news.title_ar || news.title) : (news.title_en || news.title);
+              const excerpt = isRtl ? news.excerpt_ar : news.excerpt_en;
               const isFeatured = news.is_featured;
 
               return (
@@ -347,7 +334,7 @@ const News = () => {
                               className="news-cat"
                               style={{ background: catColors[news.category] || 'var(--primary)', color: 'white' }}
                             >
-                              {isRtl ? (categoryMap[news.category] || news.category) : (NEWS_CAT_MAP_EN[news.category] || categoryMap[news.category] || news.category)}
+                              {categoryMap[news.category] || news.category}
                             </span>
                             <div className="d-flex align-items-center gap-2" style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>
                               <FaCalendarAlt size={12} />

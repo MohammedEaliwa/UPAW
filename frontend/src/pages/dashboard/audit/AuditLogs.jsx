@@ -464,17 +464,17 @@ const AuditLogs = () => {
     }
   }
 
+  const roleSlug = user?.role_slug || user?.role?.slug || '';
+  const roleId = String(user?.role_id || user?.role?.id || '');
+  const roleName = user?.role_name || user?.role?.name || (typeof user?.role === 'string' ? user?.role : '');
+
   const isAdmin =
-    String(user?.role_id) === '1' ||
-    user?.role === 'admin' ||
-    user?.role === 'مسؤول النظام' ||
-    user?.role?.slug === 'admin' ||
-    user?.role?.name === 'مسؤول النظام' ||
-    user?.role_slug === 'admin' ||
-    user?.role_name === 'مسؤول النظام' ||
+    roleId === '1' ||
+    roleSlug === 'admin' ||
+    roleName === 'admin' ||
+    roleName === 'مسؤول النظام' ||
     user?.username?.toLowerCase() === 'admin' ||
-    Boolean(user?.is_admin) ||
-    !user?.role_slug;
+    Boolean(user?.is_admin);
 
   // Security Guard: Block regular employees
   if (!isAdmin) {

@@ -100,7 +100,7 @@ const DashboardLayout = () => {
     { path: '/dashboard/companies', name: 'الشركات', icon: <FaRegBuilding />, roles: ['admin', 'data_entry'] },
     { path: '/dashboard/requests', name: 'الطلبات الواردة', icon: <FaClipboardList />, roles: ['admin', 'data_entry'] },
     { path: '/dashboard/submit-requests', name: 'تقديم الطلبات', icon: <FaPaperPlane />, roles: ['admin', 'data_entry', 'employee'] },
-    { path: '/dashboard/audit-logs', name: 'سجلات التدقيق', icon: <FaShieldAlt />, roles: ['admin', 'data_entry'] },
+    { path: '/dashboard/audit-logs', name: 'سجلات التدقيق', icon: <FaShieldAlt />, roles: ['admin'] },
     { path: '/dashboard/manage-gallery', name: 'إدارة معرض الصور', icon: <FaImages />, roles: ['admin', 'data_entry'] },
     { path: '/dashboard/manage-home-images', name: 'صور الصفحة الرئيسية', icon: <FaImages />, roles: ['admin', 'data_entry'] },
     { path: '/dashboard/user-management', name: 'إدارة المستخدمين', icon: <FaUsers />, roles: ['admin', 'data_entry'] },

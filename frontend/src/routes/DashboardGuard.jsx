@@ -8,8 +8,8 @@ const DashboardGuard = ({ children }) => {
 
   useEffect(() => {
     const handlePopState = () => {
-      // Check if user is still logged in when back button is pressed
-      const stored = sessionStorage.getItem('upaw_logged_user') || localStorage.getItem('upaw_logged_user');
+      // Check if user session is still active in sessionStorage when back button is pressed
+      const stored = sessionStorage.getItem('upaw_logged_user');
       if (!stored || !auth?.user) {
         window.history.pushState(null, '', '/login');
         navigate('/login', { replace: true });

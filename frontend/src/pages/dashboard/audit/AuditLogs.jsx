@@ -457,7 +457,7 @@ const AuditLogs = () => {
   let user = auth.user;
   if (!user || Object.keys(user).length === 0) {
     try {
-      const stored = localStorage.getItem('upaw_logged_user') || localStorage.getItem('user') || '{}';
+      const stored = sessionStorage.getItem('upaw_logged_user') || '{}';
       user = JSON.parse(stored);
     } catch {
       user = {};

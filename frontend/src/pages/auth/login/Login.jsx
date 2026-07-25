@@ -21,11 +21,15 @@ const Login = () => {
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
+  const [idleNotice, setIdleNotice] = useState(false);
 
   useEffect(() => {
     if (user) {
       navigate('/dashboard', { replace: true });
+    }
+    if (sessionStorage.getItem('upaw_logout_reason') === 'idle') {
+      setIdleNotice(true);
+      sessionStorage.removeItem('upaw_logout_reason');
     }
   }, [user, navigate]);
 
@@ -117,6 +121,13 @@ const Login = () => {
                     </span>
                   </div>
                 </div>
+
+                {idleNotice && (
+                  <Alert variant="warning" className="d-flex align-items-center gap-2" style={{ borderRadius: 12, fontSize: '0.9rem', border: '1px solid #f59e0b40', background: '#fffbeb', color: '#b45309' }}>
+                    <FaShieldAlt style={{ flexShrink: 0 }} />
+                    <span>{isRtl ? 'تم تسجيل خروجك تلقائياً بسبب عدم وجود نشاط لمدة 10 دقائق لحماية حسابك.' : 'You were logged out automatically due to 10 minutes of inactivity.'}</span>
+                  </Alert>
+                )}
 
                 {error && (
                   <Alert variant="danger" style={{ borderRadius: 12, fontSize: '0.9rem', border: 'none', background: '#fef2f2', color: '#991b1b' }}>

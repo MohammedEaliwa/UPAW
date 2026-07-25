@@ -11,7 +11,16 @@ import {
 import { useLanguage } from '../../../context/LanguageContext';
 import { api } from '../../../services/api';
 import PrimaryButton from '../../../components/ui/PrimaryButton';
-import './home.css';
+const HOME_NEWS_CAT_MAP_EN = {
+  'الكل': 'All',
+  'إداري': 'Administration',
+  'أخبار الإدارة': 'Administration',
+  'أخبار داخلية': 'Internal News',
+  'فني': 'Technical',
+  'أخبار فنية': 'Technical',
+  'أخبار الهيئة': 'Authority News',
+  'إعلانات': 'Announcements',
+};
 
 // Animated Counter
 const Counter = ({ target, suffix = '', prefix = '' }) => {
@@ -601,24 +610,26 @@ const Home = () => {
                     <div className="overflow-hidden">
                       <img
                         src={news.image}
-                        alt={isRtl ? (news.title_ar || news.title) : (news.title_en || news.title)}
+                        alt={isRtl ? (news.title_ar || news.title || '') : (news.title_en || news.title_ar || news.title || '')}
                         className="news-img"
                       />
                     </div>
                     <div className="p-4 d-flex flex-column justify-content-between" style={{ minHeight: '220px' }}>
                       <div>
                         <div className="d-flex align-items-center justify-content-between mb-3">
-                           <span className="news-cat">{news.category}</span>
+                           <span className="news-cat">{isRtl ? news.category : (HOME_NEWS_CAT_MAP_EN[news.category] || news.category)}</span>
                            <div className="d-flex align-items-center gap-2 text-muted" style={{ fontSize: '0.82rem' }}>
                             <FaCalendarAlt size={12} />
                             {news.date}
                           </div>
                         </div>
                         <h5 style={{ fontWeight: 700, lineHeight: 1.55, marginBottom: '0.75rem', color: 'var(--text)' }}>
-                          {isRtl ? (news.title_ar || news.title) : (news.title_en || news.title)}
+                          {isRtl ? (news.title_ar || news.title || '') : (news.title_en || news.title_ar || news.title || '')}
                         </h5>
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.7, marginBottom: '1.5rem' }}>
-                          {isRtl ? (news.excerpt_ar || news.excerpt) : (news.excerpt_en || news.excerpt)}
+                          {isRtl
+                            ? (news.excerpt_ar || (news.content_ar ? news.content_ar.replace(/<[^>]+>/g, '').substring(0, 150) + '...' : ''))
+                            : (news.excerpt_en || news.excerpt_ar || (news.content_en ? news.content_en.replace(/<[^>]+>/g, '').substring(0, 150) + '...' : ''))}
                         </p>
                       </div>
                       <Link to="/news" style={{

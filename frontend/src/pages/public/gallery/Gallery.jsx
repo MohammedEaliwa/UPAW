@@ -93,6 +93,8 @@ const Gallery = () => {
   // ── Initial load ────────────────────────────────────────────────────────
   useEffect(() => {
     let active = true;
+
+    // Fetch categories
     const fetchCats = async () => {
       try {
         const cats = await api.getGalleryCategories?.();
@@ -103,10 +105,15 @@ const Gallery = () => {
         // not critical
       }
     };
+
+    // Fetch first page of images immediately
+    fetchPage(1, 'الكل', true);
     fetchCats();
+
     return () => {
       active = false;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Reset & reload when category changes ────────────────────────────────

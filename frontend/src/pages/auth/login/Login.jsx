@@ -16,6 +16,7 @@ const Login = () => {
   const { isDark } = useTheme();
   const isRtl = locale === 'ar';
   const { user, login } = useAuth();
+  const navigate = useNavigate();
 
   const [form, setForm] = useState({ username: '', password: '' });
   const [showPw, setShowPw] = useState(false);

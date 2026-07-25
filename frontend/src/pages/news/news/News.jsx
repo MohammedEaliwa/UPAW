@@ -497,7 +497,7 @@ const News = () => {
           setShowReportModal(false);
           setActiveReport(null);
         }}
-        title={activeReport ? (isRtl ? (activeReport.title_ar || activeReport.title) : (activeReport.title_en || activeReport.title)) : ''}
+        title={activeReport ? (isRtl ? (activeReport.title_ar || activeReport.title || '') : (activeReport.title_en || activeReport.title_ar || activeReport.title || '')) : ''}
         size="lg"
       >
         {activeReport && (
@@ -513,8 +513,8 @@ const News = () => {
             </div>
             <div 
               className="rich-text-content" 
-              style={{ lineHeight: 1.8, fontSize: '1.05rem', color: 'var(--text)' }}
-              dangerouslySetInnerHTML={{ __html: isRtl ? (activeReport.content_ar || activeReport.content) : (activeReport.content_en || activeReport.content) }} 
+              style={{ lineHeight: 1.8, fontSize: '1.05rem', color: 'var(--text)', direction: isRtl ? 'rtl' : 'ltr', textAlign: isRtl ? 'right' : 'left' }}
+              dangerouslySetInnerHTML={{ __html: isRtl ? (activeReport.content_ar || activeReport.content || '') : (activeReport.content_en || activeReport.content_ar || activeReport.content || '') }} 
             />
           </div>
         )}

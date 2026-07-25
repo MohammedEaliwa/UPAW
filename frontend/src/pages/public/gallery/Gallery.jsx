@@ -12,6 +12,14 @@ import './gallery.css';
 
 const LIMIT = 10;
 
+const GALLERY_CAT_EN = {
+  'الكل': 'All',
+  'عام': 'General',
+  'طرابلس القديمة': 'Old Tripoli',
+  'طرابلس 22': 'Tripoli 22',
+  'ليبيا القديمة': 'Old Libya',
+};
+
 const Gallery = () => {
   const { isDarkMode } = useTheme();
   const { locale } = useLanguage();
@@ -203,13 +211,17 @@ const Gallery = () => {
             border: '1px solid rgba(255,255,255,0.35)',
           }}>
             <MdPhotoLibrary style={{ color: '#fff', fontSize: '1.1rem' }} />
-            <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.85rem' }}>الهيئة الوطنية للتخطيط العمراني</span>
+            <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.85rem' }}>
+              {isRtl ? 'الهيئة الوطنية للتخطيط العمراني' : 'National Authority for Urban Planning'}
+            </span>
           </div>
           <h1 style={{ fontSize: 'clamp(2rem,5vw,3.2rem)', fontWeight: 900, color: '#fff', margin: '0 0 12px' }}>
-            معرض الصور
+            {isRtl ? 'معرض الصور' : 'Photo Gallery'}
           </h1>
           <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '1.05rem', maxWidth: 560, margin: '0 auto' }}>
-            استعرض أحدث الصور والمشاريع والفعاليات الخاصة بالهيئة الوطنية للتخطيط العمراني
+            {isRtl
+              ? 'استعرض أحدث الصور والمشاريع والفعاليات الخاصة بالهيئة الوطنية للتخطيط العمراني'
+              : 'Explore the latest photos, projects, and events of the National Authority for Urban Planning'}
           </p>
         </motion.div>
 
@@ -222,12 +234,12 @@ const Gallery = () => {
             background: isDarkMode ? 'rgba(25,35,65,0.85)' : 'rgba(255,255,255,0.95)',
             borderRadius: 14, border: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,48,135,0.12)'}`,
             backdropFilter: 'blur(10px)', minWidth: 240,
-            flexDirection: 'row-reverse',
+            flexDirection: isRtl ? 'row-reverse' : 'row',
           }}>
             <FaSearch style={{ color: '#0066cc', fontSize: '0.85rem', flexShrink: 0 }} />
             <input value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="ابحث في المعرض..."
-              style={{ border: 'none', background: 'transparent', color: isDarkMode ? '#fff' : '#1a2850', outline: 'none', fontFamily: 'Cairo, sans-serif', fontSize: '0.88rem', flex: 1, textAlign: 'right' }} />
+              placeholder={isRtl ? 'ابحث في المعرض...' : 'Search gallery...'}
+              style={{ border: 'none', background: 'transparent', color: isDarkMode ? '#fff' : '#1a2850', outline: 'none', fontFamily: 'Cairo, sans-serif', fontSize: '0.88rem', flex: 1, textAlign: isRtl ? 'right' : 'left' }} />
           </div>
           {/* Category filters */}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -241,7 +253,7 @@ const Gallery = () => {
                 border: `1px solid ${activeCategory === cat ? '#fff' : 'rgba(255,255,255,0.25)'}`,
                 boxShadow: activeCategory === cat ? '0 4px 14px rgba(0,0,0,0.15)' : 'none',
               }}>
-                {cat}
+                {isRtl ? cat : (cat === 'الكل' ? 'All' : (GALLERY_CAT_EN[cat] || cat))}
               </button>
             ))}
           </div>
@@ -250,7 +262,7 @@ const Gallery = () => {
         {/* Stats */}
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <span style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>
-            {images.length} صورة محمّلة{hasMore ? ' · اسحب للأسفل لتحميل المزيد' : ''}
+            {images.length} {isRtl ? 'صورة محمّلة' : 'images loaded'}{hasMore ? (isRtl ? ' · اسحب للأسفل لتحميل المزيد' : ' · Scroll down to load more') : ''}
           </span>
         </div>
 

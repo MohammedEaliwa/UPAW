@@ -18,6 +18,14 @@ const CAT_COLORS = {
   'تشريعات':  { bg: '#006fa8', light: '#006fa8' },
 };
 
+const CAT_MAP_EN = {
+  'الكل': 'All',
+  'تشريعات': 'Legislation',
+  'قرارات': 'Decisions',
+  'قوانين': 'Laws',
+  'لوائح': 'Regulations',
+};
+
 const CATEGORIES = ['تشريعات', 'قرارات', 'قوانين', 'لوائح', 'الكل'];
 
 // ── Component ────────────────────────────────────────────────────
@@ -209,7 +217,7 @@ const DecisionsPage = () => {
             {isRtl ? row.title_ar : (row.title_en || row.title_ar)}
           </div>
           <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-            رقم القرار: {row.number || row.id} {row.year ? `(${row.year})` : ''}
+            {isRtl ? 'رقم القرار:' : 'Decision No:'} {row.number || row.id} {row.year ? `(${row.year})` : ''}
           </div>
         </div>
       ),
@@ -232,7 +240,7 @@ const DecisionsPage = () => {
             fontSize: '0.78rem',
             whiteSpace: 'nowrap',
           }}>
-            {val || 'قرارات'}
+            {isRtl ? (val || 'قرارات') : (CAT_MAP_EN[val] || val || 'Decisions')}
           </span>
         );
       },
@@ -249,7 +257,7 @@ const DecisionsPage = () => {
             <FaUser size={10} /> {val || row.author || 'Aya'}
           </Badge>
           <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-            {row.author_role || 'مدخل بيانات'}
+            {isRtl ? (row.author_role || 'مدخل بيانات') : 'Data Entry'}
           </span>
         </div>
       ),
@@ -297,7 +305,7 @@ const DecisionsPage = () => {
             fontSize: '0.8rem', fontFamily: 'inherit', whiteSpace: 'nowrap',
           }}
         >
-          {isRtl ? cat : cat}
+          {isRtl ? cat : (CAT_MAP_EN[cat] || cat)}
         </button>
       ))}
     </div>

@@ -48,6 +48,19 @@ function upaUrlToLocal(url) {
   return null;
 }
 
+// English page title overrides for pages not yet translated in DB
+const PAGE_TITLES_EN = {
+  'تعريف بالمصلحة': 'About the Authority',
+  'تعريف-بالمصلحة': 'About the Authority',
+  'معالم تاريخية': 'Historical Landmarks',
+  'maalm-tarykhyh': 'Historical Landmarks',
+  'تقارير': 'Reports',
+  'التقارير': 'Reports',
+  'عن الهيئة': 'About the Authority',
+  'الأقاليم التخطيطية': 'Planning Regions',
+  'المشاريع': 'Projects',
+};
+
 // Cache translated content in memory
 const translationCache = {};
 
@@ -150,10 +163,15 @@ const DynamicPage = () => {
   // Derived Title & Content using useMemo
   const displayTitle = useMemo(() => {
     if (isReportsPage) return isRtl ? 'التقارير' : 'Reports';
-    if (!pageData) return '';
+    if (!pageData) {
+      if (isEn && PAGE_TITLES_EN[decodedId]) return PAGE_TITLES_EN[decodedId];
+      return decodedId.replace(/-/g, ' ');
+    }
     if (isEn) {
       if (translatedData?.title_en) return translatedData.title_en;
       if (pageData.title_en && pageData.title_en.trim() && pageData.title_en !== pageData.title_ar) return pageData.title_en;
+      if (PAGE_TITLES_EN[pageData.title_ar]) return PAGE_TITLES_EN[pageData.title_ar];
+      if (PAGE_TITLES_EN[decodedId]) return PAGE_TITLES_EN[decodedId];
       const cached = translationCache[pageData.id];
       if (cached?.title_en) return cached.title_en;
     }
@@ -164,8 +182,7 @@ const DynamicPage = () => {
     if (isReportsPage || !pageData) return '';
     if (isEn) {
       if (translatedData?.content_en) return translatedData.content_en;
-      const alreadyTranslated = pageData.content_en && pageData.content_en.trim() && pageData.content_en !== pageData.content_ar;
-      if (alreadyTranslated) return pageData.content_en;
+      if (pageData.content_en && pageData.content_en.trim() && pageData.content_en !== pageData.content_ar) return pageData.content_en;
       const cached = translationCache[pageData.id];
       if (cached?.content_en) return cached.content_en;
     }

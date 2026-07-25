@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Events\UserLoggedIn;
 use App\Events\UserLoggedOut;
 use App\Events\UserLoginFailed;
+use App\Services\AiTranslationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -452,6 +453,11 @@ class ApiController extends Controller
     public function createWorkingPaper(Request $request)
     {
         $data = $request->only(['title_ar', 'title_en', 'category', 'date', 'size', 'type', 'desc_ar', 'desc_en', 'author_ar', 'author_en', 'allow_download']);
+        AiTranslationService::autoTranslateData($data, [
+            'title_ar'  => 'title_en',
+            'desc_ar'   => 'desc_en',
+            'author_ar' => 'author_en',
+        ]);
         if ($request->hasFile('file')) {
             $file     = $request->file('file');
             $filename = time() . '-' . mt_rand(100000000, 999999999) . '.' . $file->getClientOriginalExtension();
@@ -468,6 +474,11 @@ class ApiController extends Controller
     public function updateWorkingPaper(Request $request, $id)
     {
         $data = $request->only(['title_ar', 'title_en', 'category', 'date', 'size', 'type', 'desc_ar', 'desc_en', 'author_ar', 'author_en', 'allow_download']);
+        AiTranslationService::autoTranslateData($data, [
+            'title_ar'  => 'title_en',
+            'desc_ar'   => 'desc_en',
+            'author_ar' => 'author_en',
+        ]);
         if ($request->hasFile('file')) {
             $file     = $request->file('file');
             $filename = time() . '-' . mt_rand(100000000, 999999999) . '.' . $file->getClientOriginalExtension();
@@ -582,6 +593,11 @@ class ApiController extends Controller
             'wp_slug'     => $request->input('wp_slug', ''),
         ];
 
+        AiTranslationService::autoTranslateData($data, [
+            'title_ar'   => 'title_en',
+            'content_ar' => 'content_en',
+        ]);
+
         // Store extra fields (sections, tasks, etc.) in json_data
         $stdCols = ['id', 'title_ar', 'title_en', 'content_ar', 'content_en', 'is_visible', 'order_index', 'parent_id', 'wp_slug'];
         $extra = [];
@@ -616,6 +632,11 @@ class ApiController extends Controller
         if ($request->has('is_visible')) {
             $data['is_visible'] = $request->input('is_visible') ? 1 : 0;
         }
+
+        AiTranslationService::autoTranslateData($data, [
+            'title_ar'   => 'title_en',
+            'content_ar' => 'content_en',
+        ]);
 
         // Gather all other properties into json_data
         $allInputs = $request->all();
@@ -715,6 +736,10 @@ class ApiController extends Controller
     public function createMapLocation(Request $request)
     {
         $data = $request->only(['name_ar', 'name_en', 'category', 'latitude', 'longitude', 'details_ar', 'details_en', 'created_by', 'is_approved', 'color']);
+        AiTranslationService::autoTranslateData($data, [
+            'name_ar'    => 'name_en',
+            'details_ar' => 'details_en',
+        ]);
         if (!isset($data['is_approved'])) {
             $data['is_approved'] = 0;
         } else {
@@ -757,6 +782,10 @@ class ApiController extends Controller
         }
 
         $data = $request->only(['name_ar', 'name_en', 'category', 'latitude', 'longitude', 'details_ar', 'details_en', 'is_approved', 'rejection_comment', 'color']);
+        AiTranslationService::autoTranslateData($data, [
+            'name_ar'    => 'name_en',
+            'details_ar' => 'details_en',
+        ]);
         if (isset($data['is_approved'])) {
             $data['is_approved'] = (int)$data['is_approved'];
         }
@@ -1012,9 +1041,12 @@ class ApiController extends Controller
     {
         $data = $request->only(['category', 'title_ar', 'title_en', 'date', 'image', 'excerpt_ar', 'excerpt_en', 'content_ar', 'content_en', 'target_audience', 'author_id']);
         $data['is_visible'] = $request->input('is_visible', true) ? 1 : 0;
-        $data['title_en']   = $data['title_en']   ?? $data['title_ar']   ?? '';
-        $data['excerpt_en'] = $data['excerpt_en'] ?? $data['excerpt_ar'] ?? '';
-        $data['content_en'] = $data['content_en'] ?? $data['content_ar'] ?? '';
+        
+        AiTranslationService::autoTranslateData($data, [
+            'title_ar'   => 'title_en',
+            'excerpt_ar' => 'excerpt_en',
+            'content_ar' => 'content_en',
+        ]);
 
         $id = DB::table('news')->insertGetId($data);
         $authorId = $request->input('author_id');
@@ -1051,9 +1083,12 @@ class ApiController extends Controller
         if ($request->has('is_visible')) {
             $data['is_visible'] = $request->input('is_visible') ? 1 : 0;
         }
-        $data['title_en']   = $data['title_en']   ?? $data['title_ar']   ?? '';
-        $data['excerpt_en'] = $data['excerpt_en'] ?? $data['excerpt_ar'] ?? '';
-        $data['content_en'] = $data['content_en'] ?? $data['content_ar'] ?? '';
+        
+        AiTranslationService::autoTranslateData($data, [
+            'title_ar'   => 'title_en',
+            'excerpt_ar' => 'excerpt_en',
+            'content_ar' => 'content_en',
+        ]);
 
         DB::table('news')->where('id', $id)->update($data);
         $editorName = $request->input('editor_username', 'مدخل البيانات');

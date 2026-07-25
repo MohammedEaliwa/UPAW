@@ -49,6 +49,14 @@ const KML_LAYER_COLORS = [
   '#003087', '#198754', '#fd7e14', '#dc3545', '#6f42c1', '#0dcaf0', '#ffc107'
 ];
 
+const KML_FOLDER_MAP_EN = {
+  'إدارة الهيئة': 'Authority Management',
+  'الفروع': 'Branches',
+  'المكاتب': 'Offices',
+  'Boundry_Libya': 'Libya Boundary',
+  'الحدود': 'Boundaries',
+};
+
 const InteractiveMap = () => {
   const { locale, t } = useLanguage();
   const [locations, setLocations] = useState([]);
@@ -161,13 +169,13 @@ const InteractiveMap = () => {
 
               {/* Layer Manager */}
               <h6 className="fw-bold mb-2 text-secondary" style={{ fontSize: '0.85rem' }}>
-                🗺️ طبقات الخريطة:
+                🗺️ {isRtl ? 'طبقات الخريطة:' : 'Map Layers:'}
               </h6>
               <div className="mb-3 p-2 rounded" style={{ fontSize: '0.82rem', display: 'flex', flexDirection: 'column', gap: 6, background: 'var(--bg)', border: '1px solid var(--border)' }}>
                 <Form.Check 
                   type="checkbox"
                   id="layer-locations"
-                  label="معالم ومشروعات الهيئة"
+                  label={isRtl ? 'معالم ومشروعات الهيئة' : 'Authority Landmarks & Projects'}
                   checked={showLocations}
                   onChange={e => setShowLocations(e.target.checked)}
                 />
@@ -183,7 +191,7 @@ const InteractiveMap = () => {
                           background: KML_LAYER_COLORS[idx % KML_LAYER_COLORS.length],
                           display: 'inline-block', flexShrink: 0
                         }} />
-                        {folder} <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>(KML)</span>
+                        {isRtl ? folder : (KML_FOLDER_MAP_EN[folder] || folder)} <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>(KML)</span>
                       </span>
                     }
                     checked={!hiddenFolders.has(folder)}
@@ -191,7 +199,7 @@ const InteractiveMap = () => {
                   />
                 ))}
                 {kmlFolders.length === 0 && (
-                  <span className="text-muted" style={{ fontSize: '0.78rem' }}>لا توجد طبقات KML مستوردة</span>
+                  <span className="text-muted" style={{ fontSize: '0.78rem' }}>{isRtl ? 'لا توجد طبقات KML مستوردة' : 'No imported KML layers'}</span>
                 )}
               </div>
               

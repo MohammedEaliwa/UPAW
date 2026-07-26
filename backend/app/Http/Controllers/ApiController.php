@@ -526,21 +526,36 @@ class ApiController extends Controller
         return response()->json($pages);
     }
 
-    public function getPage($id)
+    private function findPageRecord($id)
     {
-        $cleanId = trim($id, '-');
+        if (empty($id)) return null;
+
+        $idStr = (string) $id;
+        $cleanId = trim($idStr, '-');
+        $decoded = urldecode($idStr);
+        $cleanDecoded = trim($decoded, '-');
         $encodedClean = strtolower(rawurlencode($cleanId));
         $lowerClean = strtolower($cleanId);
-        $encodedRaw = strtolower(rawurlencode($id));
+        $encodedRaw = strtolower(rawurlencode($idStr));
 
-        $page = DB::table('pages')
-            ->where('id', $id)
+        return DB::table('pages')
+            ->where('id', $idStr)
             ->orWhere('id', $cleanId)
+            ->orWhere('id', $decoded)
+            ->orWhere('id', $cleanDecoded)
+            ->orWhere('id', $encodedRaw)
+            ->orWhere('id', $encodedClean)
             ->orWhereRaw('LOWER(id) = ?', [$encodedClean])
             ->orWhereRaw('LOWER(id) = ?', [$lowerClean])
             ->orWhereRaw('LOWER(id) = ?', [$encodedRaw])
-            ->orWhereRaw('LOWER(id) = ?', [strtolower($id)])
+            ->orWhereRaw('LOWER(id) = ?', [strtolower($idStr)])
+            ->orWhereRaw('LOWER(id) = ?', [strtolower($decoded)])
             ->first();
+    }
+
+    public function getPage($id)
+    {
+        $page = $this->findPageRecord($id);
 
         if (!$page) {
             return response()->json(['error' => 'Not found'], 404);
@@ -626,9 +641,21 @@ class ApiController extends Controller
 
     public function updatePage(Request $request, $id)
     {
+        $existing = $this->findPageRecord($id);
+        if (!$existing) {
+            return response()->json(['error' => 'Page not found'], 404);
+        }
+        $targetId = $existing->id;
+
         $stdCols = ['title_ar', 'title_en', 'content_ar', 'content_en', 'is_visible', 'order_index', 'parent_id', 'wp_slug'];
         
-        $data = $request->only($stdCols);
+        $data = [];
+        foreach ($stdCols as $col) {
+            if ($request->has($col)) {
+                $data[$col] = $request->input($col);
+            }
+        }
+
         if ($request->has('is_visible')) {
             $data['is_visible'] = $request->input('is_visible') ? 1 : 0;
         }
@@ -665,8 +692,14 @@ class ApiController extends Controller
             $data['image'] = $this->uploadsUrl($filename);
         }
 
-        DB::table('pages')->where('id', $id)->update($data);
-        $updated = DB::table('pages')->where('id', $id)->first();
+        if (!empty($data)) {
+            DB::table('pages')->where('id', $targetId)->update($data);
+        }
+
+        $updated = DB::table('pages')->where('id', $targetId)->first();
+        if (!$updated) {
+            return response()->json(['error' => 'Page not found after update'], 404);
+        }
         
         $res = [
             'id'          => $updated->id,
@@ -692,14 +725,21 @@ class ApiController extends Controller
 
     public function togglePageVisibility(Request $request, $id)
     {
+        $existing = $this->findPageRecord($id);
+        if (!$existing) {
+            return response()->json(['error' => 'Page not found'], 404);
+        }
         $val = $request->input('is_visible');
-        DB::table('pages')->where('id', $id)->update(['is_visible' => $val ? 1 : 0]);
+        DB::table('pages')->where('id', $existing->id)->update(['is_visible' => $val ? 1 : 0]);
         return response()->json(['success' => true]);
     }
 
     public function deletePage($id)
     {
-        DB::table('pages')->where('id', $id)->delete();
+        $existing = $this->findPageRecord($id);
+        if ($existing) {
+            DB::table('pages')->where('id', $existing->id)->delete();
+        }
         return response()->json(['success' => true]);
     }
 

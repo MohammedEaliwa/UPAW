@@ -417,12 +417,27 @@ const ManagePages = () => {
   }, [pagesList, selectedPageId]);
 
   const getPageTitle = (page) => {
-    if (page.title_ar) return page.title_ar;
-    try {
-      return decodeURIComponent(page.id).replace(/-/g, ' ');
-    } catch {
-      return page.id;
+    if (!page) return '';
+    if (typeof page === 'string') {
+      try {
+        return page.includes('%') ? decodeURIComponent(page).replace(/-/g, ' ') : page;
+      } catch {
+        return page;
+      }
     }
+    let title = page.title_ar;
+    if (title && typeof title === 'string' && title.includes('%')) {
+      try { title = decodeURIComponent(title); } catch {}
+    }
+    if (title && title.trim()) return title;
+    if (page.id) {
+      try {
+        return decodeURIComponent(page.id).replace(/-/g, ' ');
+      } catch {
+        return page.id;
+      }
+    }
+    return '';
   };
 
   // Image Upload helper
@@ -1282,7 +1297,7 @@ const ManagePages = () => {
               </Button>
               <FaFileAlt className="ms-1" />
               <span style={{ maxWidth: 350, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {pageData?.title_ar || selectedPageId}
+                {getPageTitle(pageData || selectedPageId)}
               </span>
             </span>
           ) : (

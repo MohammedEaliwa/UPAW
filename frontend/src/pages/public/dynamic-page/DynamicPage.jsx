@@ -52,6 +52,8 @@ function upaUrlToLocal(url) {
 const PAGE_TITLES_EN = {
   'تعريف بالمصلحة': 'About the Authority',
   'تعريف-بالمصلحة': 'About the Authority',
+  'تعريف بالهيئة': 'About the Authority',
+  'تعريف-بالهيئة': 'About the Authority',
   'معالم تاريخية': 'Historical Landmarks',
   'maalm-tarykhyh': 'Historical Landmarks',
   'تقارير': 'Reports',

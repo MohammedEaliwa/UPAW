@@ -365,14 +365,14 @@ const InternalNews = () => {
       >
         <div style={{ position: 'absolute', top: -50, left: '20%', width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(0,168,232,0.12) 0%, transparent 70%)' }} />
         <div className="position-relative">
-          <div className="d-flex align-items-center gap-2 mb-2" style={{ opacity: 0.85 }}>
-            <FaBullhorn />
-            <span>بوابة الموظف الموحدة</span>
+          <div className="d-flex align-items-center gap-2 mb-2" style={{ opacity: 0.9, color: '#ffffff' }}>
+            <FaBullhorn style={{ color: '#7eb8ff' }} />
+            <span style={{ color: '#ffffff', fontWeight: 600 }}>بوابة الموظف الموحدة</span>
           </div>
-          <h2 className="fw-extrabold mb-2 text-white" style={{ fontSize: '1.8rem' }}>
-            أهلاً بك مجدداً، {loggedInUser.username}
+          <h2 className="fw-extrabold mb-2 text-white" style={{ fontSize: '1.8rem', color: '#ffffff' }}>
+            أهلاً بك مجدداً، <span style={{ color: '#7eb8ff' }}>{loggedInUser.username}</span>
           </h2>
-          <p className="mb-0 text-white-50" style={{ fontSize: '0.98rem' }}>
+          <p className="mb-0 text-white-50" style={{ fontSize: '0.98rem', color: 'rgba(255, 255, 255, 0.85)' }}>
             المنصة الداخلية لاستعراض التعاميم الإدارية، الأخبار والمستجدات الخاصة بالهيئة الوطنية للتخطيط العمراني.
           </p>
         </div>

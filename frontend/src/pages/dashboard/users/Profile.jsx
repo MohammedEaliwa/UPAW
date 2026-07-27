@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Card, Row, Col, Button, Form, Badge } from 'react-bootstrap';
 import { motion } from 'motion/react';
 import { 
@@ -17,7 +17,7 @@ const Profile = () => {
   const { showToast } = useToast();
   const { user, updateUser, logout } = useAuth();
 
-  const [loggedInUser, setLocalUser] = useState(user || {
+  const loggedInUser = user || {
     id: 2,
     username: 'User_DataEntry',
     email: 'data_entry@example.com',
@@ -27,7 +27,7 @@ const Profile = () => {
     role_id: 2,
     role: { name: 'مدخل بيانات', slug: 'data_entry' },
     is_active: true
-  });
+  };
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [showPwModal, setShowPwModal] = useState(false);
@@ -39,28 +39,15 @@ const Profile = () => {
     job_number: loggedInUser.job_number || loggedInUser.username,
   });
 
-  const [pwForm, setPwForm] = useState({
-    oldPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  });
-
-  // keep updateUser/logout from useAuth (extracted above)
-
-  // Sync local state when auth `user` updates
-  React.useEffect(() => {
-    if (user) setLocalUser(user);
-  }, [user]);
-
-  // Ensure edit form follows the current local user
-  React.useEffect(() => {
+  const handleOpenEditModal = () => {
     setEditForm({
-      username: loggedInUser?.username || '',
-      email: loggedInUser?.email || '',
-      phone: loggedInUser?.phone || '',
-      job_number: loggedInUser?.job_number || loggedInUser?.username || ''
+      username: loggedInUser.username,
+      email: loggedInUser.email,
+      phone: loggedInUser.phone,
+      job_number: loggedInUser.job_number || loggedInUser.username,
     });
-  }, [loggedInUser]);
+    setShowEditModal(true);
+  };
 
   const handleEditSubmit = (e) => {
     e.preventDefault();
@@ -239,7 +226,7 @@ const Profile = () => {
             <Button 
               variant="info" 
               className="text-white px-4 py-2.5 rounded-pill shadow-sm fw-bold d-flex align-items-center gap-2"
-              onClick={() => setShowEditModal(true)}
+              onClick={handleOpenEditModal}
               style={{ background: '#0d9488', border: 'none' }}
             >
               <FaEdit />

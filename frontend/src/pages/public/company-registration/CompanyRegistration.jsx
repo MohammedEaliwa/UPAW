@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from '../../../context/ThemeContext';
-import { useLanguage } from '../../../context/LanguageContext';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import {
@@ -275,10 +274,7 @@ const CompanyRegistration = () => {
   };
   const [formData, setFormData] = useState(emptyForm);
 
-  useEffect(() => { fetchCompanies(); }, []);
-
   const fetchCompanies = async () => {
-    setLoading(true);
     try {
       const data = await api.getCompanies();
       const list = Array.isArray(data) ? data : (data.data || []);
@@ -286,6 +282,14 @@ const CompanyRegistration = () => {
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchCompanies().then(() => {
+      if (cancelled) return;
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   const filtered = companies.filter(c =>
     (c.company_name || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -352,7 +356,7 @@ const CompanyRegistration = () => {
   };
 
   const tabStyle = tab => ({
-    padding: '12px 28px', borderRadius: 12, border: 'none', cursor: 'pointer',
+    padding: '12px 28px', borderRadius: 12, cursor: 'pointer',
     fontFamily: 'Cairo, sans-serif', fontWeight: 700, fontSize: '0.9rem',
     transition: 'all 0.25s', display: 'flex', alignItems: 'center', gap: 8,
     background: activeTab === tab ? '#fff' : 'rgba(255,255,255,0.15)',
@@ -621,7 +625,7 @@ const CompanyRegistration = () => {
                       </button>
                       <button type="button" onClick={() => {
                         const link = document.createElement('a');
-                        link.href = 'http://localhost:5000/uploads/company_registration_template.pdf';
+                        link.href = window.location.origin + '/uploads/company_registration_template.pdf';
                         link.download = 'نموذج_تسجيل_الشركات_والمكاتب_الاستشارية.pdf';
                         link.target = '_blank';
                         document.body.appendChild(link);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Container, Row, Col, Form, Badge, ListGroup } from 'react-bootstrap';
 import { MapContainer, TileLayer, Marker, Popup, Polygon, useMap } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
@@ -29,14 +29,18 @@ const kmlIcon = L.icon({
   popupAnchor: [1, -34],
 });
 
-// Map controller to animate flying to target coordinates
-const MapController = ({ activeCenter }) => {
+// Map controller to animate flying to target coordinates only on explicit user clicks
+const MapController = ({ targetCoords }) => {
   const map = useMap();
+  const prevTriggerId = useRef(null);
+
   useEffect(() => {
-    if (activeCenter) {
-      map.flyTo(activeCenter, 14, { duration: 1.5 });
+    if (targetCoords && targetCoords.id && targetCoords.id !== prevTriggerId.current) {
+      prevTriggerId.current = targetCoords.id;
+      map.flyTo([targetCoords.lat, targetCoords.lng], targetCoords.zoom || 14, { duration: 1.2 });
     }
-  }, [activeCenter, map]);
+  }, [targetCoords, map]);
+
   return null;
 };
 
@@ -54,7 +58,8 @@ const InteractiveMap = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCat, setSelectedCat] = useState('الكل');
   const [activeLocation, setActiveLocation] = useState(null);
-  const [mapCenter, setMapCenter] = useState([32.8872, 13.1932]); // Tripoli center
+  const [flyTarget, setFlyTarget] = useState(null);
+  const [mapCenter, setMapCenter] = useState([27.0, 17.5]); // Center of Libya
   const [showLocations, setShowLocations] = useState(true);
 
   const toggleFolder = (folderName) => {
@@ -69,20 +74,19 @@ const InteractiveMap = () => {
     });
   };
 
-  useEffect(() => {
-    api.getMapLocations()
-      .then(data => setLocations(Array.isArray(data) ? data : []))
-      .catch(() => setLocations([]));
+  const [loading, setLoading] = useState(true);
 
-    api.getKmlFeatures()
-      .then(data => {
+  useEffect(() => {
+    Promise.all([
+      api.getMapLocations().then(data => setLocations(Array.isArray(data) ? data : [])).catch(() => setLocations([])),
+      api.getKmlFeatures().then(data => {
         if (Array.isArray(data)) {
           setKmlFeatures(data);
           const folders = [...new Set(data.map(f => f.folder).filter(Boolean))];
           setKmlFolders(folders);
         }
-      })
-      .catch(() => {});
+      }).catch(() => {})
+    ]).finally(() => setLoading(false));
   }, []);
 
   const isRtl = locale === 'ar';
@@ -121,7 +125,7 @@ const InteractiveMap = () => {
 
   const handleLocationSelect = (loc) => {
     setActiveLocation(loc);
-    setMapCenter([loc.latitude, loc.longitude]);
+    setFlyTarget({ lat: loc.latitude, lng: loc.longitude, id: `sidebar-${loc.id}-${Date.now()}` });
   };
 
   return (
@@ -249,7 +253,13 @@ const InteractiveMap = () => {
 
               {/* Locations List */}
               <div style={{ flex: 1, overflowY: 'auto' }} className="pe-1">
-                {filteredLocations.length === 0 ? (
+                {loading ? (
+                  <div className="d-flex flex-column gap-2">
+                    {[1, 2, 3, 4].map(i => (
+                      <div key={i} className="skeleton-pulse" style={{ height: 60, borderRadius: 12 }} />
+                    ))}
+                  </div>
+                ) : filteredLocations.length === 0 ? (
                   <div className="text-center py-5 text-muted">
                     <FaMapMarkerAlt size={32} className="opacity-25 mb-2" />
                     <p style={{ fontSize: '0.9rem' }}>{t('map.empty')}</p>
@@ -297,61 +307,99 @@ const InteractiveMap = () => {
           {/* Leaflet Map with beautiful markers */}
           <Col lg={8}>
             <div className="map-wrapper">
-              <MapContainer center={mapCenter} zoom={6} style={{ height: '100%', width: '100%', zIndex: 1 }}>
+              <MapContainer center={mapCenter} zoom={5} style={{ height: '100%', width: '100%', zIndex: 1 }}>
                 <TileLayer
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
-                <MapController activeCenter={activeLocation ? [activeLocation.latitude, activeLocation.longitude] : null} />
+                <MapController targetCoords={flyTarget} />
                 
                 {/* Municipal locations layer */}
                 {showLocations && (
                   <MarkerClusterGroup chunkedLoading>
-                    {filteredLocations.map((loc) => (
-                      <Marker
-                        key={loc.id}
-                        position={[loc.latitude, loc.longitude]}
-                        eventHandlers={{
-                          click: () => setActiveLocation(loc),
-                        }}
-                      >
-                        <Popup>
-                          <div style={{ fontFamily: 'inherit', direction: isRtl ? 'rtl' : 'ltr', textAlign: isRtl ? 'right' : 'left' }}>
-                            <h6 className="fw-bold mb-1" style={{ color: 'var(--primary)', fontSize: '0.95rem' }}>
-                              {isRtl ? (loc.name_ar || loc.name) : (loc.name_en || loc.name)}
-                            </h6>
-                            <Badge style={{ background: catColors[loc.category] || '#6c757d', marginBottom: '8px' }}>
-                              {getCategoryLabel(loc.category)}
-                            </Badge>
-                            <p className="mb-2 text-muted" style={{ fontSize: '0.85rem', lineHeight: 1.4 }}>
-                              {(isRtl ? (loc.details_ar || loc.details) : (loc.details_en || loc.details))}
-                            </p>
-                            <div className="d-flex align-items-center gap-1 text-secondary" style={{ fontSize: '0.75rem', borderTop: '1px solid #eee', paddingTop: '6px' }}>
-                              <FaMapMarkerAlt />
-                              <span>{t('map.coordinates')}: {loc.latitude.toFixed(5)}, {loc.longitude.toFixed(5)}</span>
+                    {filteredLocations.map((loc) => {
+                      const markerColor = loc.color || '#003087';
+                      const coloredIcon = L.divIcon({
+                        className: '',
+                        html: `<div style="width:25px;height:41px;position:relative">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 25 41" width="25" height="41">
+                            <path d="M12.5 0C5.6 0 0 5.6 0 12.5c0 9.4 12.5 28.5 12.5 28.5S25 21.9 25 12.5C25 5.6 19.4 0 12.5 0z" fill="${markerColor}"/>
+                            <circle cx="12.5" cy="12.5" r="5.5" fill="white" opacity="0.9"/>
+                          </svg>
+                        </div>`,
+                        iconSize: [25, 41],
+                        iconAnchor: [12, 41],
+                        popupAnchor: [1, -34],
+                      });
+                      return (
+                        <Marker
+                          key={loc.id}
+                          position={[loc.latitude, loc.longitude]}
+                          icon={coloredIcon}
+                          eventHandlers={{
+                            click: () => {
+                              setActiveLocation(loc);
+                              setFlyTarget({ lat: loc.latitude, lng: loc.longitude, id: `loc-${loc.id}-${Date.now()}` });
+                            },
+                          }}
+                        >
+                          <Popup>
+                            <div style={{ fontFamily: 'inherit', direction: isRtl ? 'rtl' : 'ltr', textAlign: isRtl ? 'right' : 'left' }}>
+                              <h6 className="fw-bold mb-1" style={{ color: 'var(--primary)', fontSize: '0.95rem' }}>
+                                {isRtl ? (loc.name_ar || loc.name) : (loc.name_en || loc.name)}
+                              </h6>
+                              <Badge style={{ background: catColors[loc.category] || '#6c757d', marginBottom: '8px' }}>
+                                {getCategoryLabel(loc.category)}
+                              </Badge>
+                              <p className="mb-2 text-muted" style={{ fontSize: '0.85rem', lineHeight: 1.4 }}>
+                                {(isRtl ? (loc.details_ar || loc.details) : (loc.details_en || loc.details))}
+                              </p>
+                              <div className="d-flex align-items-center gap-1 text-secondary" style={{ fontSize: '0.75rem', borderTop: '1px solid #eee', paddingTop: '6px' }}>
+                                <FaMapMarkerAlt />
+                                <span>{t('map.coordinates')}: {loc.latitude.toFixed(5)}, {loc.longitude.toFixed(5)}</span>
+                              </div>
                             </div>
-                          </div>
-                        </Popup>
-                      </Marker>
-                    ))}
+                          </Popup>
+                        </Marker>
+                      );
+                    })}
                   </MarkerClusterGroup>
                 )}
 
-                {/* KML Features layers – dynamic by folder */}
+                {/* KML Features layers – dynamic by folder/color */}
                 {kmlFeatures.map((feat) => {
                   if (hiddenFolders.has(feat.folder)) return null;
 
                   const coords = JSON.parse(feat.coordinates);
                   const isPoint = feat.type === 'Point';
                   const folderIdx = kmlFolders.indexOf(feat.folder);
-                  const color = KML_LAYER_COLORS[folderIdx >= 0 ? folderIdx % KML_LAYER_COLORS.length : 0];
+                  const color = feat.color || KML_LAYER_COLORS[folderIdx >= 0 ? folderIdx % KML_LAYER_COLORS.length : 0];
 
                   if (isPoint) {
+                    const pointIcon = L.divIcon({
+                      className: '',
+                      html: `<div style="width:25px;height:41px;position:relative">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 25 41" width="25" height="41">
+                          <path d="M12.5 0C5.6 0 0 5.6 0 12.5c0 9.4 12.5 28.5 12.5 28.5S25 21.9 25 12.5C25 5.6 19.4 0 12.5 0z" fill="${color}"/>
+                          <circle cx="12.5" cy="12.5" r="5.5" fill="white" opacity="0.9"/>
+                        </svg>
+                      </div>`,
+                      iconSize: [25, 41],
+                      iconAnchor: [12, 41],
+                      popupAnchor: [1, -34],
+                    });
                     return (
                       <Marker 
                         key={feat.id} 
                         position={coords}
-                        icon={kmlIcon}
+                        icon={pointIcon}
+                        eventHandlers={{
+                          click: () => {
+                            if (Array.isArray(coords) && coords.length >= 2) {
+                              setFlyTarget({ lat: coords[0], lng: coords[1], id: `kml-${feat.id}-${Date.now()}` });
+                            }
+                          }
+                        }}
                       >
                         <Popup>
                           <div style={{ fontFamily: 'inherit', direction: 'rtl', textAlign: 'right', minWidth: 180 }}>
@@ -377,8 +425,8 @@ const InteractiveMap = () => {
                         pathOptions={{
                           color: color,
                           fillColor: color,
-                          fillOpacity: 0.12,
-                          weight: 2,
+                          fillOpacity: 0.25,
+                          weight: 3,
                         }}
                       >
                         <Popup>

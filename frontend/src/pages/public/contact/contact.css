@@ -1,18 +1,24 @@
-/* Contact Page Styles */
+﻿/* =========================================================
+   CONTACT PAGE — RESPONSIVE CSS
+   ========================================================= */
 
 .contact-page {
   /* Scope wrapper */
 }
 
-/* Header section responsive styles */
+/* ── Header ───────────────────────────────────────── */
 .contact-header {
   background: linear-gradient(135deg, #001225 0%, #001d5a 50%, #003087 100%);
-  padding: 70px 0 50px;
+  padding: 80px 0 50px;
   position: relative;
   overflow: hidden;
 }
 
-/* Contact Info Card */
+.contact-header h1 {
+  font-size: clamp(1.8rem, 5vw, 2.5rem);
+}
+
+/* ── Contact Info Card ────────────────────────────── */
 .contact-info-card {
   background: linear-gradient(135deg, #001d5a 0%, #003087 60%, #0066cc 100%);
   border-radius: 24px;
@@ -20,7 +26,7 @@
   margin-bottom: 1.5rem;
 }
 
-/* Form Container Card */
+/* ── Form Container Card ──────────────────────────── */
 .contact-form-container {
   background: var(--card-bg);
   border-radius: 24px;
@@ -29,40 +35,30 @@
   box-shadow: var(--shadow-md);
 }
 
-/* Responsive queries */
+/* ── Responsive breakpoints ───────────────────────── */
+@media (max-width: 991px) {
+  .contact-info-card, .contact-form-container {
+    padding: 30px 25px;
+  }
+}
+
 @media (max-width: 768px) {
   .contact-header {
-    padding: 50px 0 35px;
+    padding: 60px 0 40px;
     text-align: center;
   }
   
   .contact-info-card {
-    padding: 25px 20px;
+    padding: 24px 20px;
   }
   
   .contact-form-container {
-    padding: 25px 20px;
+    padding: 24px 20px;
   }
 
-  /* Stack layout column groups */
+  /* Reduce space between stacked elements */
   .contact-page .row.g-5 {
-    display: flex;
-    flex-direction: column;
-  }
-  
-  /* On mobile, show info first, then form */
-  .contact-page .row.g-5 > div:nth-child(1) {
-    order: 1;
-    width: 100% !important;
-  }
-  .contact-page .row.g-5 > div:nth-child(2) {
-    order: 2;
-    width: 100% !important;
-  }
-
-  /* Form columns grid stack to single column */
-  .contact-page form .row.g-3 > div {
-    width: 100% !important;
+    --bs-gutter-y: 2rem !important;
   }
 }
 
@@ -71,6 +67,10 @@
     font-size: 1.8rem !important;
   }
   .contact-header p {
-    font-size: 0.95rem !important;
+    font-size: 0.92rem !important;
+  }
+  .contact-info-card, .contact-form-container {
+    padding: 20px 16px;
+    border-radius: 16px;
   }
 }

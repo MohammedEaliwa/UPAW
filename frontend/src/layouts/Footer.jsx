@@ -7,6 +7,8 @@ import {
   FaSignInAlt, FaChevronLeft, FaChevronRight
 } from 'react-icons/fa';
 import { useLanguage } from '../context/LanguageContext';
+import PrimaryButton from '../components/ui/PrimaryButton';
+
 
 const Footer = () => {
   const { locale, t } = useLanguage();
@@ -158,10 +160,15 @@ const Footer = () => {
                  {locale === 'ar' ? 'للوصول إلى النظام الداخلي وإدارة البيانات' : 'Access the internal dashboard to manage planning data.'}
                </p>
                <div className="d-flex flex-column gap-2">
-                 <Link to="/login" className="footer-portal-btn text-center justify-content-center" style={{ fontSize: '0.88rem', padding: '9px 20px', width: '100%', gap: '8px' }}>
-                   <FaSignInAlt size={14} />
+                 <PrimaryButton 
+                   to="/login" 
+                   variant="primary" 
+                   className="w-100" 
+                   style={{ fontSize: '0.88rem', padding: '9px 20px' }} 
+                   icon={<FaSignInAlt size={14} />}
+                 >
                    {locale === 'ar' ? 'تسجيل الدخول للنظام' : 'Login to System'}
-                 </Link>
+                 </PrimaryButton>
                </div>
              </div>
           </Col>

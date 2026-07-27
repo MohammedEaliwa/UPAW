@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Container, Row, Col, Spinner } from 'react-bootstrap';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, Navigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import * as FaIcons from 'react-icons/fa';
 import { useLanguage } from '../../../context/LanguageContext';
 import { api } from '../../../services/api';
-import { API_ENDPOINTS } from '../../../config/apiEndpoints';
 import './dynamic-page.css';
 import DataTable from '../../../components/DataTable';
 
@@ -45,7 +44,7 @@ function upaUrlToLocal(url) {
     for (const [key, val] of Object.entries(UPA_URL_TO_LOCAL)) {
       if (fullPath.includes(key.toLowerCase())) return `/page/${val}`;
     }
-  } catch {}
+  } catch (e) { /* ignore error */ }
   return null;
 }
 
@@ -58,7 +57,7 @@ async function fetchPageData(decodedId) {
     try {
       const data = await api.getPageById(attempt);
       if (data && (data.content_ar || data.title_ar)) return data;
-    } catch {}
+    } catch (e) { /* ignore error */ }
   }
   return null;
 }
@@ -69,7 +68,7 @@ async function translatePageOnDemand(pageId) {
     const data = await api.translatePage(pageId);
     translationCache[pageId] = data;
     return data;
-  } catch {}
+  } catch (e) { /* ignore error */ }
   return null;
 }
 
@@ -80,6 +79,7 @@ const DynamicPage = () => {
   const isRtl = !isEn;
   const navigate = useNavigate();
   const contentRef = useRef(null);
+  const carouselRef = useRef(null);
 
   let decodedId;
   try { decodedId = decodeURIComponent(id); } catch { decodedId = id; }
@@ -89,21 +89,88 @@ const DynamicPage = () => {
 
   const [pageData, setPageData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [translatedData, setTranslatedData] = useState(null);
   const [translating, setTranslating] = useState(false);
-  const [displayContent, setDisplayContent] = useState('');
-  const [displayTitle, setDisplayTitle] = useState('');
   // Reports table state
   const [reportsRows, setReportsRows] = useState([]);
-  const [reportsLoading, setReportsLoading] = useState(false);
+  const [reportsLoading, setReportsLoading] = useState(isReportsPage);
   const [reportsPage, setReportsPage] = useState(1);
-  const [reportsLimit, setReportsLimit] = useState(10);
+  const [reportsLimit, setReportsLimit] = useState(15);
+  const [reportsSearch, setReportsSearch] = useState('');
+  const [reportsSortConfig, setReportsSortConfig] = useState({ key: 'date', dir: 'desc' });
 
-  // If this is the reports page, ensure the header shows the Reports title
+  // 1. Fetch page data asynchronously
   useEffect(() => {
+    let cancelled = false;
+
+    fetchPageData(decodedId).then(data => {
+      if (cancelled) return;
+      setPageData(data);
+      setLoading(false);
+    });
+
     if (isReportsPage) {
-      setDisplayTitle(isRtl ? 'التقارير' : 'Reports');
+      api.getWorkingPapers().then(rows => {
+        if (cancelled) return;
+        const normalized = (rows || []).map(r => ({
+          id: r.id,
+          title: isRtl ? r.title_ar || r.title_en : r.title_en || r.title_ar,
+          category: r.category || r.section || '',
+          date: r.date || r.published_at || '',
+          file: r.file_url || r.file || '',
+        }));
+        setReportsRows(normalized);
+        setReportsLoading(false);
+      }).catch(() => { if (!cancelled) setReportsLoading(false); });
     }
-  }, [isReportsPage, isRtl]);
+
+    return () => { cancelled = true; };
+  }, [decodedId, isReportsPage, isRtl]);
+
+  // 2. On-demand translation effect
+  useEffect(() => {
+    if (isReportsPage || !pageData || !isEn) return;
+    const alreadyTranslated = pageData.content_en && pageData.content_en.trim() && pageData.content_en !== pageData.content_ar;
+    if (alreadyTranslated || translationCache[pageData.id]) return;
+
+    let cancelled = false;
+    Promise.resolve().then(() => {
+      if (cancelled) return;
+      setTranslating(true);
+    });
+
+    translatePageOnDemand(pageData.id).then(res => {
+      if (cancelled) return;
+      setTranslating(false);
+      if (res) setTranslatedData(res);
+    });
+    return () => { cancelled = true; };
+  }, [isReportsPage, pageData, isEn]);
+
+  // Derived Title & Content using useMemo
+  const displayTitle = useMemo(() => {
+    if (isReportsPage) return isRtl ? 'التقارير' : 'Reports';
+    if (!pageData) return '';
+    if (isEn) {
+      if (translatedData?.title_en) return translatedData.title_en;
+      if (pageData.title_en && pageData.title_en.trim() && pageData.title_en !== pageData.title_ar) return pageData.title_en;
+      const cached = translationCache[pageData.id];
+      if (cached?.title_en) return cached.title_en;
+    }
+    return pageData.title_ar || decodedId.replace(/-/g, ' ');
+  }, [isReportsPage, isRtl, pageData, isEn, translatedData, decodedId]);
+
+  const displayContent = useMemo(() => {
+    if (isReportsPage || !pageData) return '';
+    if (isEn) {
+      if (translatedData?.content_en) return translatedData.content_en;
+      const alreadyTranslated = pageData.content_en && pageData.content_en.trim() && pageData.content_en !== pageData.content_ar;
+      if (alreadyTranslated) return pageData.content_en;
+      const cached = translationCache[pageData.id];
+      if (cached?.content_en) return cached.content_en;
+    }
+    return pageData.content_ar || '';
+  }, [isReportsPage, pageData, isEn, translatedData]);
 
   const effectivePageTitle = isReportsPage
     ? (isRtl ? 'التقارير' : 'Reports')
@@ -354,99 +421,79 @@ const DynamicPage = () => {
       default:
         return null;
     }
-
-    // Reports page handling moved to main render to display full-width DataTable
   };
 
-  // 1. Fetch page from DB
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setPageData(null);
-    setDisplayContent('');
-    if (!isReportsPage) setDisplayTitle('');
+  // Filter and sort reports with useMemo
+  const reportsDisplayed = useMemo(() => {
+    let result = [...reportsRows];
 
-    fetchPageData(decodedId).then(data => {
-      if (cancelled) return;
-      setPageData(data);
-      setLoading(false);
-    });
-
-    // If reports page, load working papers
-    if (isReportsPage) {
-      setReportsLoading(true);
-      api.getWorkingPapers().then(rows => {
-        if (cancelled) return;
-        const normalized = (rows || []).map(r => ({
-          id: r.id,
-          title: isRtl ? r.title_ar || r.title_en : r.title_en || r.title_ar,
-          category: r.category || r.section || '',
-          date: r.date || r.published_at || '',
-          file: r.file_url || r.file || '',
-        }));
-        setReportsRows(normalized);
-        setReportsLoading(false);
-      }).catch(() => { if (!cancelled) setReportsLoading(false); });
+    if (reportsSearch.trim()) {
+      const q = reportsSearch.toLowerCase();
+      result = result.filter(
+        (r) =>
+          (r.title || '').toLowerCase().includes(q) ||
+          (r.category || '').toLowerCase().includes(q) ||
+          (r.date || '').toLowerCase().includes(q)
+      );
     }
 
-    return () => { cancelled = true; };
-  }, [decodedId]);
-
-  // Import functionality removed — user requested not to transfer data
-
-  // 2. When page data arrives or locale changes — set content or trigger translation
-  useEffect(() => {
-    if (isReportsPage) {
-      setDisplayTitle(isRtl ? 'التقارير' : 'Reports');
-      setDisplayContent('');
-      setTranslating(false);
-      return;
-    }
-    if (!pageData) return;
-    let cancelled = false;
-
-    if (!isEn) {
-      setDisplayTitle(pageData.title_ar || decodedId.replace(/-/g, ' '));
-      setDisplayContent(pageData.content_ar || '');
-      setTranslating(false);
-      return;
+    const { key, dir } = reportsSortConfig;
+    if (key) {
+      result.sort((a, b) => {
+        const valA = (a[key] || '').toString().toLowerCase();
+        const valB = (b[key] || '').toString().toLowerCase();
+        if (valA < valB) return dir === 'asc' ? -1 : 1;
+        if (valA > valB) return dir === 'asc' ? 1 : -1;
+        return 0;
+      });
     }
 
-    const alreadyTranslated =
-      pageData.content_en &&
-      pageData.content_en.trim() &&
-      pageData.content_en !== pageData.content_ar;
+    return result;
+  }, [reportsRows, reportsSearch, reportsSortConfig]);
 
-    if (alreadyTranslated) {
-      setDisplayTitle(pageData.title_en || pageData.title_ar || '');
-      setDisplayContent(pageData.content_en);
-      setTranslating(false);
-      return;
-    }
+  const reportsTotalPages = Math.max(1, Math.ceil(reportsDisplayed.length / reportsLimit));
+  const safeReportsPage = Math.min(reportsPage, reportsTotalPages);
+  const reportsPageData = reportsDisplayed.slice((safeReportsPage - 1) * reportsLimit, safeReportsPage * reportsLimit);
 
-    const cached = translationCache[pageData.id];
-    if (cached) {
-      setDisplayTitle(cached.title_en || pageData.title_ar || '');
-      setDisplayContent(cached.content_en || pageData.content_ar || '');
-      setTranslating(false);
-      return;
-    }
+  const handleReportsSortChange = ({ key, dir }) => {
+    setReportsSortConfig({ key, dir });
+    setReportsPage(1);
+  };
 
-    setDisplayTitle(pageData.title_ar || decodedId.replace(/-/g, ' '));
-    setDisplayContent(pageData.content_ar || '');
-    setTranslating(true);
-
-    translatePageOnDemand(pageData.id).then(result => {
-      if (cancelled) return;
-      setTranslating(false);
-      if (result && result.content_en) {
-        setDisplayTitle(result.title_en || pageData.title_ar || '');
-        setDisplayContent(result.content_en);
-      }
-    });
-
-    return () => { cancelled = true; };
-  }, [pageData, isEn, decodedId]);
+  const reportsColumns = [
+    {
+      key: 'title',
+      label: isRtl ? 'عنوان التقرير' : 'Report Title',
+      sortable: true,
+      style: { textAlign: isRtl ? 'right' : 'left' },
+      render: (val) => <span style={{ fontWeight: 600 }}>{val}</span>,
+    },
+    {
+      key: 'category',
+      label: isRtl ? 'الفئة' : 'Category',
+      sortable: true,
+      style: { width: '160px' },
+    },
+    {
+      key: 'date',
+      label: isRtl ? 'التاريخ' : 'Date',
+      sortable: true,
+      style: { width: '140px', whiteSpace: 'nowrap' },
+    },
+    {
+      key: 'file',
+      label: isRtl ? 'ملف' : 'File',
+      style: { width: '110px', textAlign: 'center' },
+      render: (val) =>
+        val ? (
+          <a href={val} target="_blank" rel="noreferrer" style={{ fontWeight: 700, color: 'var(--primary)' }}>
+            {isRtl ? 'تحميل' : 'Download'}
+          </a>
+        ) : (
+          isRtl ? 'غير متوفر' : 'N/A'
+        ),
+    },
+  ];
 
   // 3. Intercept link clicks in rendered HTML content
   useEffect(() => {
@@ -474,6 +521,255 @@ const DynamicPage = () => {
     return () => container.removeEventListener('click', handleClick);
   }, [displayContent, navigate]);
 
+  // 4. Convert WordPress gallery structures AND plain img groups into interactive carousels
+  useEffect(() => {
+    const container = carouselRef.current;
+    if (!container || !displayContent) return;
+
+    // Clean up any previously-built carousels or lightboxes to avoid duplicates
+    container.querySelectorAll('.wp-carousel-wrapper').forEach(el => el.remove());
+    document.querySelectorAll('.wp-lightbox').forEach(el => el.remove());
+
+    // ── Helper: build and insert a carousel from an imagesData array ──────────
+    const buildCarousel = (imagesData, labelText, insertBefore, removeNodes) => {
+      if (imagesData.length === 0) return;
+
+      const outerWrapper = document.createElement('div');
+      outerWrapper.className = 'wp-carousel-wrapper';
+
+      if (labelText) {
+        const label = document.createElement('div');
+        label.className = 'wp-carousel-label';
+        label.textContent = labelText;
+        outerWrapper.appendChild(label);
+      }
+
+      const carousel = document.createElement('div');
+      carousel.className = 'wp-carousel';
+
+      const viewport = document.createElement('div');
+      viewport.className = 'wp-carousel-viewport';
+
+      const activeImg = document.createElement('img');
+      activeImg.className = 'wp-carousel-img';
+      activeImg.draggable = false;
+      viewport.appendChild(activeImg);
+
+      const spinner = document.createElement('div');
+      spinner.className = 'wp-carousel-spinner spinner-border text-light';
+      spinner.setAttribute('role', 'status');
+      viewport.appendChild(spinner);
+
+      carousel.appendChild(viewport);
+
+      const counter = document.createElement('div');
+      counter.className = 'wp-carousel-counter';
+      carousel.appendChild(counter);
+
+      const btnLeft = document.createElement('button');
+      btnLeft.className = 'wp-carousel-btn wp-carousel-btn-left';
+      btnLeft.innerHTML = '&#8250;';
+      btnLeft.setAttribute('aria-label', 'Previous');
+
+      const btnRight = document.createElement('button');
+      btnRight.className = 'wp-carousel-btn wp-carousel-btn-right';
+      btnRight.innerHTML = '&#8249;';
+      btnRight.setAttribute('aria-label', 'Next');
+
+      carousel.appendChild(btnLeft);
+      carousel.appendChild(btnRight);
+
+      const zones = document.createElement('div');
+      zones.className = 'wp-carousel-click-zones';
+      const zoneLeft = document.createElement('div');
+      zoneLeft.className = 'wp-carousel-zone-left';
+      const zoneMiddle = document.createElement('div');
+      zoneMiddle.className = 'wp-carousel-zone-middle';
+      const zoneRight = document.createElement('div');
+      zoneRight.className = 'wp-carousel-zone-right';
+      zones.appendChild(zoneLeft);
+      zones.appendChild(zoneMiddle);
+      zones.appendChild(zoneRight);
+      viewport.appendChild(zones);
+
+      const dotsEl = document.createElement('div');
+      dotsEl.className = 'wp-carousel-dots';
+
+      outerWrapper.appendChild(carousel);
+      outerWrapper.appendChild(dotsEl);
+
+      const lightbox = document.createElement('div');
+      lightbox.className = 'wp-lightbox';
+      const lightboxImg = document.createElement('img');
+      lightboxImg.className = 'wp-lightbox-img';
+      lightbox.appendChild(lightboxImg);
+      const lightboxClose = document.createElement('button');
+      lightboxClose.className = 'wp-lightbox-close';
+      lightboxClose.innerHTML = '&times;';
+      lightbox.appendChild(lightboxClose);
+      document.body.appendChild(lightbox);
+
+      let current = 0;
+      const total = imagesData.length;
+
+      const updateSlide = (idx) => {
+        current = (idx + total) % total;
+        carousel.classList.add('wp-carousel-loading');
+        activeImg.style.opacity = '0.35';
+        const imgData = imagesData[current];
+        activeImg.src = imgData.full;
+        activeImg.alt = imgData.alt;
+        activeImg.onload = () => {
+          carousel.classList.remove('wp-carousel-loading');
+          activeImg.style.opacity = '1';
+        };
+        activeImg.onerror = () => {
+          activeImg.src = imgData.thumbnail;
+          carousel.classList.remove('wp-carousel-loading');
+          activeImg.style.opacity = '1';
+        };
+        counter.textContent = `${current + 1} / ${total}`;
+        dotsEl.querySelectorAll('.wp-carousel-dot').forEach((dot, i) => {
+          dot.classList.toggle('active', i === current);
+        });
+      };
+
+      for (let i = 0; i < total; i++) {
+        const dot = document.createElement('button');
+        dot.className = 'wp-carousel-dot' + (i === 0 ? ' active' : '');
+        dot.addEventListener('click', () => updateSlide(i));
+        dotsEl.appendChild(dot);
+      }
+
+      const goNext = () => updateSlide(current + 1);
+      const goPrev = () => updateSlide(current - 1);
+
+      btnLeft.addEventListener('click', (e) => { e.stopPropagation(); goNext(); });
+      btnRight.addEventListener('click', (e) => { e.stopPropagation(); goPrev(); });
+      zoneLeft.addEventListener('click', (e) => { e.stopPropagation(); goNext(); });
+      zoneRight.addEventListener('click', (e) => { e.stopPropagation(); goPrev(); });
+
+      zoneMiddle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        lightboxImg.src = imagesData[current].full;
+        lightbox.classList.add('active');
+      });
+      lightboxClose.addEventListener('click', () => lightbox.classList.remove('active'));
+      lightbox.addEventListener('click', () => lightbox.classList.remove('active'));
+      lightboxImg.addEventListener('click', (e) => e.stopPropagation());
+
+      let startX = 0;
+      viewport.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, { passive: true });
+      viewport.addEventListener('touchend', e => {
+        const diff = startX - e.changedTouches[0].clientX;
+        if (Math.abs(diff) > 40) { if (diff > 0) goNext(); else goPrev(); }
+      }, { passive: true });
+
+      updateSlide(0);
+
+      // Insert carousel and remove original nodes
+      if (insertBefore && insertBefore.parentNode) {
+        insertBefore.parentNode.insertBefore(outerWrapper, insertBefore);
+      }
+      removeNodes.forEach(n => { if (n.parentNode) n.remove(); });
+    };
+
+    // ── 1. WordPress .gallery containers ─────────────────────────────────────
+    const galleries = Array.from(container.querySelectorAll('.gallery'));
+    galleries.forEach(gallery => {
+      const figures = Array.from(gallery.querySelectorAll('figure.gallery-item'));
+      const imagesData = figures.map(fig => {
+        const img = fig.querySelector('img');
+        const link = fig.querySelector('a');
+        if (!img) return null;
+        return {
+          thumbnail: img.getAttribute('src'),
+          full: link ? link.getAttribute('href') : img.getAttribute('src'),
+          alt: img.getAttribute('alt') || '',
+        };
+      }).filter(Boolean);
+
+      if (imagesData.length === 0) return;
+
+      let labelText = '';
+      const prevEl = gallery.previousElementSibling;
+      if (prevEl && prevEl.tagName.toLowerCase() === 'p') {
+        labelText = prevEl.textContent.trim();
+      }
+
+      buildCarousel(imagesData, labelText, gallery, [gallery, ...(labelText && prevEl ? [prevEl] : [])]);
+    });
+
+    // ── 2. Plain consecutive <img> tags (for pages without .gallery markup) ──
+    // Only run if no .gallery was found, to avoid double processing
+    if (galleries.length === 0) {
+      const allImgs = Array.from(container.querySelectorAll('img:not(.wp-carousel-img)'));
+      if (allImgs.length === 0) return;
+
+      // Group images by their top-level parent block under container
+      const imageWrappers = [];
+      allImgs.forEach(img => {
+        let el = img;
+        while (el && el.parentElement !== container) {
+          el = el.parentElement;
+        }
+        if (el && !imageWrappers.includes(el)) imageWrappers.push(el);
+      });
+
+      // Group consecutive wrappers (split on non-image text content between them)
+      const wrapperGroups = [];
+      let wg = [];
+      imageWrappers.forEach((wrapper, i) => {
+        wg.push(wrapper);
+        const next = imageWrappers[i + 1];
+        if (!next) { wrapperGroups.push([...wg]); wg = []; return; }
+        let between = wrapper.nextSibling;
+        let hasContent = false;
+        while (between && between !== next) {
+          if (between.nodeType === Node.TEXT_NODE && between.textContent.trim()) { hasContent = true; break; }
+          if (between.nodeType === Node.ELEMENT_NODE && !['br'].includes(between.tagName.toLowerCase())) {
+            const txt = between.textContent.trim();
+            if (txt && !between.querySelector('img')) { hasContent = true; break; }
+          }
+          between = between.nextSibling;
+        }
+        if (hasContent) { wrapperGroups.push([...wg]); wg = []; }
+      });
+
+      wrapperGroups.forEach(wrappers => {
+        const imagesData = [];
+        wrappers.forEach(w => {
+          // w may be the <img> itself (direct child) or a container holding <img>s
+          const isImg = w.tagName && w.tagName.toLowerCase() === 'img';
+          const imgs = isImg ? [w] : Array.from(w.querySelectorAll('img'));
+          imgs.forEach(img => {
+            const link = img.closest('a');
+            imagesData.push({
+              thumbnail: img.getAttribute('src'),
+              full: link ? link.getAttribute('href') : img.getAttribute('src'),
+              alt: img.getAttribute('alt') || '',
+            });
+          });
+        });
+        if (imagesData.length === 0) return;
+
+        // Label from preceding heading or paragraph
+        let labelText = '';
+        const prevEl = wrappers[0].previousElementSibling;
+        if (prevEl && /^(h[1-6]|p)$/i.test(prevEl.tagName)) {
+          labelText = prevEl.textContent.trim();
+        }
+
+        buildCarousel(imagesData, labelText, wrappers[0], wrappers);
+      });
+    }
+
+    // Cleanup lightbox on unmount
+    return () => {
+      document.querySelectorAll('.wp-lightbox').forEach(el => el.remove());
+    };
+  }, [displayContent]);
+
   const hasSections = pageData?.sections && pageData.sections.length > 0;
   const hasHtmlContent = displayContent && displayContent.trim().length > 0;
 
@@ -492,7 +788,7 @@ const DynamicPage = () => {
               <span>/</span>
               <span style={{ color: 'white', fontWeight: 600 }}>{displayTitle || '...'}</span>
             </div>
-            <h1 style={{ fontFamily: 'Cairo, sans-serif', fontWeight: 800, fontSize: 'clamp(1.5rem,4vw,2.4rem)', margin: 0 }}>
+            <h1 style={{ fontFamily: 'Cairo, sans-serif', fontWeight: 800, fontSize: 'clamp(1.5rem,4vw,2.4rem)', margin: 0, color: '#ffffff' }}>
               {effectivePageTitle}
             </h1>
             {translating && (
@@ -505,45 +801,59 @@ const DynamicPage = () => {
         </Container>
       </section>
 
-      <Container style={{ paddingTop: 40 }}>
+      <Container style={{ paddingTop: 40, maxWidth: isReportsPage ? 1300 : undefined }}>
         {isReportsPage ? (
           reportsLoading ? (
             <div className="text-center py-5">
               <Spinner animation="border" variant="primary" style={{ width: 40, height: 40 }} />
             </div>
           ) : (
-            <Row className="justify-content-center">
-              <Col lg={8} md={10}>
-                <div className="rounded-4 p-4 p-md-5" style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', boxShadow: '0 6px 30px rgba(3,37,76,0.06)' }}>
-                  <h2 style={{ fontWeight: 800, textAlign: 'center', marginBottom: 8 }}>{isRtl ? 'التقارير' : 'Reports'}</h2>
-                  <p style={{ textAlign: 'center', color: 'var(--text-muted)', marginBottom: 18 }}>{isRtl ? 'قائمة التقارير متاحة للعرض والتحميل' : 'List of reports available for viewing and download'}</p>
-                  {/* import button removed as requested */}
-                  <DataTable
-                    data={reportsRows.slice((reportsPage - 1) * reportsLimit, reportsPage * reportsLimit)}
-                    total={reportsRows.length}
-                    page={reportsPage}
-                    limit={reportsLimit}
-                    loading={reportsLoading}
-                    rtl={isRtl}
-                    onPageChange={(p) => setReportsPage(p)}
-                    onLimitChange={(l) => { setReportsLimit(l); setReportsPage(1); }}
-                    columns={[
-                      { key: 'title', label: isRtl ? 'عنوان التقرير' : 'Title' },
-                      { key: 'category', label: isRtl ? 'الإقليم' : 'Category' },
-                      { key: 'date', label: isRtl ? 'التاريخ' : 'Date' },
-                      { key: 'file', label: isRtl ? 'ملف' : 'File', render: (val) => val ? (<a href={val} target="_blank" rel="noreferrer">{isRtl ? 'تحميل' : 'Download'}</a>) : (isRtl ? 'غير متوفر' : 'N/A') },
-                    ]}
-                    pageSize={reportsLimit}
-                    emptyMessage={isRtl ? 'لا توجد تقارير' : 'No reports available'}
-                  />
-                </div>
-              </Col>
-            </Row>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.15 }}
+            >
+              <div className="text-center mb-4">
+                <h2 style={{ fontWeight: 800, marginBottom: 8 }}>{isRtl ? 'التقارير' : 'Reports'}</h2>
+                <p style={{ color: 'var(--text-muted)', marginBottom: 0 }}>
+                  {isRtl ? 'قائمة التقارير متاحة للعرض والتحميل' : 'List of reports available for viewing and download'}
+                </p>
+              </div>
+              <DataTable
+                columns={reportsColumns}
+                data={reportsPageData}
+                total={reportsDisplayed.length}
+                page={safeReportsPage}
+                limit={reportsLimit}
+                totalPages={reportsTotalPages}
+                loading={reportsLoading}
+                rtl={isRtl}
+                onPageChange={(p) => setReportsPage(p)}
+                onLimitChange={(l) => {
+                  setReportsLimit(l);
+                  setReportsPage(1);
+                }}
+                onSearch={(s) => {
+                  setReportsSearch(s);
+                  setReportsPage(1);
+                }}
+                onSortChange={handleReportsSortChange}
+                searchPlaceholder={isRtl ? 'بحث بعنوان التقرير أو الفئة أو التاريخ...' : 'Search by title, category, or date...'}
+                emptyIcon={<FaIcons.FaFileAlt />}
+                emptyText={isRtl ? 'لا توجد تقارير مطابقة لنتائج البحث' : 'No reports matching search results'}
+              />
+            </motion.div>
           )
         ) : loading ? (
-          <div className="text-center py-5">
-            <Spinner animation="border" variant="primary" style={{ width: 40, height: 40 }} />
-          </div>
+          <Row className="g-4 mb-5">
+            <Col lg={12}>
+              <div className="skeleton-pulse mb-4" style={{ height: 260, borderRadius: 20 }} />
+              <div className="skeleton-pulse mb-3" style={{ height: 40, width: '60%', borderRadius: 10 }} />
+              <div className="skeleton-pulse mb-2" style={{ height: 20, width: '90%', borderRadius: 6 }} />
+              <div className="skeleton-pulse mb-2" style={{ height: 20, width: '85%', borderRadius: 6 }} />
+              <div className="skeleton-pulse mb-4" style={{ height: 20, width: '70%', borderRadius: 6 }} />
+            </Col>
+          </Row>
         ) : !pageData ? (
           <Row className="justify-content-center">
             <Col lg={7}>
@@ -591,37 +901,6 @@ const DynamicPage = () => {
                 </div>
               )}
 
-              {/* If this is the reports page, render full-width DataTable and skip card-style content */}
-              {isReportsPage && (
-                <div className="my-5" style={{ direction: isRtl ? 'rtl' : 'ltr' }}>
-                  <Container fluid className="py-3">
-                    <h2 className="mb-4" style={{ fontWeight: 800 }}>{isRtl ? 'التقارير' : 'Reports'}</h2>
-                    <div style={{ background: 'transparent' }}>
-                      {/* import button removed by user request */}
-                      <DataTable
-                        data={reportsRows.slice((reportsPage - 1) * reportsLimit, reportsPage * reportsLimit)}
-                        total={reportsRows.length}
-                        page={reportsPage}
-                        limit={reportsLimit}
-                        loading={reportsLoading}
-                        rtl={isRtl}
-                        onPageChange={(p) => setReportsPage(p)}
-                        onLimitChange={(l) => { setReportsLimit(l); setReportsPage(1); }}
-                        plain={true}
-                        columns={[
-                          { key: 'title', label: isRtl ? 'العنوان' : 'Title' },
-                          { key: 'category', label: isRtl ? 'الفئة' : 'Category' },
-                          { key: 'date', label: isRtl ? 'التاريخ' : 'Date' },
-                          { key: 'file', label: isRtl ? 'ملف' : 'File', render: (val) => val ? (<a href={val} target="_blank" rel="noreferrer">{isRtl ? 'تحميل' : 'Download'}</a>) : (isRtl ? 'غير متوفر' : 'N/A') },
-                        ]}
-                        pageSize={reportsLimit}
-                        emptyMessage={isRtl ? 'لا توجد تقارير' : 'No reports available'}
-                      />
-                    </div>
-                  </Container>
-                </div>
-              )}
-
             {/* HTML Content — rendered below sections if present */}
             {hasHtmlContent && (
               <Row className="justify-content-center mt-4">
@@ -639,7 +918,7 @@ const DynamicPage = () => {
                       transition: 'opacity 0.2s',
                       opacity: translating ? 0.6 : 1,
                     }}
-                    ref={contentRef}
+                    ref={(el) => { contentRef.current = el; carouselRef.current = el; }}
                     dangerouslySetInnerHTML={{ __html: displayContent }}
                   />
                 </Col>

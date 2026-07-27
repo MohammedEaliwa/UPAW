@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Card, Table, Button, Badge, Form } from 'react-bootstrap';
-import { FaEdit, FaTrash, FaBan, FaCheckCircle, FaUsersCog, FaUserPlus, FaTrashAlt, FaFileExcel } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaBan, FaCheckCircle, FaUsersCog, FaUserPlus, FaFileExcel, FaLock } from 'react-icons/fa';
 import { motion } from 'motion/react';
 import * as XLSX from 'xlsx';
 import { useEffect } from 'react';
@@ -8,8 +8,11 @@ import { api } from '../../../services/api';
 import ModernModal from '../../../components/ModernModal';
 import PrimaryButton from '../../../components/ui/PrimaryButton';
 import ToastNotification from '../../../components/ui/ToastNotification';
+import { useAuth } from '../../../context/AuthContext';
 
 const UserManagement = () => {
+  const { user: currentUser } = useAuth();
+  const isAdmin = currentUser?.role?.slug === 'admin';
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
 
@@ -51,8 +54,18 @@ const UserManagement = () => {
   };
 
 
+  const displayedUsers = users.filter(u => {
+    if (isAdmin) return true;
+    return u.role_id !== 1 && u.role?.slug !== 'admin';
+  });
+
+  const displayedRoles = roles.filter(r => {
+    if (isAdmin) return true;
+    return r.id !== 1 && r.slug !== 'admin';
+  });
+
   const exportToExcel = () => {
-    const formattedData = users.map(user => ({
+    const formattedData = displayedUsers.map(user => ({
       'الرقم الوظيفي': user.job_number,
       'الاسم الرباعي': user.username,
       'البريد الإلكتروني': user.email,
@@ -69,8 +82,12 @@ const UserManagement = () => {
   };
 
   const handleToggleActive = async (user) => {
+    if (!user || !user.id) return;
     try {
-      const updated = { ...user, is_active: !user.is_active };
+      const updated = { 
+        ...user, 
+        is_active: (user.is_active == 1 || user.is_active === true) ? 0 : 1 
+      };
       await api.updateUser(user.id, updated);
       showResult('تم تعديل حالة الحساب بنجاح', 'success');
       const d = await api.getUsers();
@@ -146,7 +163,7 @@ const UserManagement = () => {
             تسجيل مستخدم جديد
           </PrimaryButton>
           <Badge bg="primary" className="fs-6 py-2 px-3 rounded-pill shadow-sm d-flex align-items-center">
-            إجمالي المستخدمين: {users.length}
+            إجمالي المستخدمين: {displayedUsers.length}
           </Badge>
         </div>
       </div>
@@ -161,12 +178,13 @@ const UserManagement = () => {
                   <th className="py-3">الرقم الوظيفي</th>
                   <th className="py-3">الصلاحية</th>
                   <th className="py-3">البيانات الخاصة</th>
+                  {isAdmin && <th className="py-3">كلمة المرور</th>}
                   <th className="py-3">الحالة</th>
                   <th className="py-3">الإجراءات</th>
                 </tr>
               </thead>
               <tbody>
-                {users.map((user) => (
+                {displayedUsers.map((user) => (
                   <tr key={user.id} className={!user.is_active ? 'opacity-75 bg-light' : ''}>
                     <td className="fw-bold">{user.username}</td>
                     <td><Badge bg="secondary">{user.job_number}</Badge></td>
@@ -179,8 +197,15 @@ const UserManagement = () => {
                       <div className="small text-muted mb-1"><strong>البريد:</strong> {user.email}</div>
                       <div className="small text-muted mb-1"><strong>الهاتف:</strong> {user.phone}</div>
                       <div className="small text-primary mb-1"><strong>الفرع:</strong> {user.branch || 'غير محدد'}</div>
-                      <div className="small text-danger"><strong>المرور:</strong> {user.password}</div>
                     </td>
+                    {isAdmin && (
+                      <td className="text-center">
+                        <div className="small text-danger d-flex align-items-center justify-content-center gap-1">
+                          <FaLock size={11} />
+                          <span style={{ fontFamily: 'monospace', letterSpacing: 1 }}>{user.password}</span>
+                        </div>
+                      </td>
+                    )}
                     <td>
                       {user.is_active ? (
                         <Badge bg="success" className="p-2"><FaCheckCircle className="ms-1"/> نشط</Badge>
@@ -190,15 +215,17 @@ const UserManagement = () => {
                     </td>
                     <td>
                       <div className="d-flex justify-content-center gap-2">
-                        <Button variant={user.is_active ? "warning" : "success"} size="sm" onClick={() => handleToggleActive(user.id)} title={user.is_active ? "إيقاف الحساب" : "تفعيل الحساب"}>
+                        <Button variant={user.is_active ? "warning" : "success"} size="sm" onClick={() => handleToggleActive(user)} title={user.is_active ? "إيقاف الحساب" : "تفعيل الحساب"}>
                           {user.is_active ? <FaBan /> : <FaCheckCircle />}
                         </Button>
                         <Button variant="primary" size="sm" onClick={() => handleEditClick(user)}>
                           <FaEdit />
                         </Button>
-                        <Button variant="danger" size="sm" onClick={() => handleDeleteClick(user)}>
-                          <FaTrash />
-                        </Button>
+                        {isAdmin && (
+                          <Button variant="danger" size="sm" onClick={() => handleDeleteClick(user)}>
+                            <FaTrash />
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -245,7 +272,7 @@ const UserManagement = () => {
               onChange={e => setNewUser({...newUser, role_id: Number(e.target.value)})}
               required
             >
-              {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+              {displayedRoles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
             </Form.Select>
           </Form.Group>
           <Form.Group className="mb-3">
@@ -279,6 +306,7 @@ const UserManagement = () => {
               required
             />
           </Form.Group>
+          {isAdmin && (
           <Form.Group className="mb-3">
             <Form.Label className="fw-bold">كلمة المرور</Form.Label>
             <Form.Control
@@ -286,9 +314,10 @@ const UserManagement = () => {
               placeholder="أدخل كلمة المرور الافتراضية"
               value={newUser.password}
               onChange={e => setNewUser({...newUser, password: e.target.value})}
-              required
+              required={isAdmin}
             />
           </Form.Group>
+          )}
           <Form.Group className="mb-4">
             <Form.Check
               type="switch"
@@ -330,7 +359,7 @@ const UserManagement = () => {
                 onChange={e => setEditingUser({...editingUser, role_id: Number(e.target.value)})}
                 required
               >
-                {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                {displayedRoles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
               </Form.Select>
             </Form.Group>
             <Form.Group className="mb-3">
@@ -352,10 +381,12 @@ const UserManagement = () => {
               <Form.Label className="fw-bold">رقم الهاتف</Form.Label>
               <Form.Control type="text" value={editingUser.phone} onChange={e => setEditingUser({...editingUser, phone: e.target.value})} required />
             </Form.Group>
+            {isAdmin && (
             <Form.Group className="mb-4">
               <Form.Label className="fw-bold">كلمة المرور</Form.Label>
-              <Form.Control type="text" value={editingUser.password} onChange={e => setEditingUser({...editingUser, password: e.target.value})} required />
+              <Form.Control type="text" value={editingUser.password} onChange={e => setEditingUser({...editingUser, password: e.target.value})} />
             </Form.Group>
+            )}
             <div className="d-flex justify-content-end gap-2 mt-4">
               <PrimaryButton variant="secondary" onClick={() => setShowEditModal(false)}>إلغاء</PrimaryButton>
               <PrimaryButton type="submit">حفظ التعديلات</PrimaryButton>

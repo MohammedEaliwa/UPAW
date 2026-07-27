@@ -75,7 +75,7 @@ const Contact = () => {
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', padding: '5px 16px', borderRadius: 99, color: 'rgba(255,255,255,0.85)', fontSize: '0.85rem', fontWeight: 600, marginBottom: '1rem' }}>
               <FaEnvelope size={12} /> {t('contact.tag')}
             </div>
-            <h1 style={{ color: '#fff', fontWeight: 900, fontSize: '2.5rem', marginBottom: '0.5rem' }}>
+            <h1 style={{ color: '#fff', fontWeight: 900, marginBottom: '0.5rem' }}>
               {t('contact.title')}
             </h1>
             <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1.05rem', margin: 0 }}>

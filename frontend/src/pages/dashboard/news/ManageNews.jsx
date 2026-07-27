@@ -73,12 +73,19 @@ const ManageNews = () => {
 
     api.getNews({ page: p, limit: l, search: s, category: cat })
       .then(resp => {
-        if (resp && resp.data) {
-          setData(resp.data);
+        // Backend returns { total, rows } when paginated, or plain array otherwise
+        if (resp && resp.rows) {
+          setData(Array.isArray(resp.rows) ? resp.rows : []);
           setTotal(resp.total || 0);
-          setTotalPages(resp.totalPages || 1);
-          setPage(resp.page || p);
-          setLimit(resp.limit || l);
+          setTotalPages(Math.max(1, Math.ceil((resp.total || 0) / l)));
+          setPage(p);
+          setLimit(l);
+        } else if (resp && resp.data) {
+          setData(Array.isArray(resp.data) ? resp.data : []);
+          setTotal(resp.total || 0);
+          setTotalPages(resp.totalPages || Math.max(1, Math.ceil((resp.total || 0) / l)));
+          setPage(p);
+          setLimit(l);
         } else {
           const arr = Array.isArray(resp) ? resp : [];
           setData(arr);

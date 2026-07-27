@@ -26,6 +26,13 @@ const ManageGallery = () => {
   const [imagePreview, setImagePreview] = useState('');
   const [formLoading, setFormLoading] = useState(false);
 
+  // Bulk operations states
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkModal, setBulkModal] = useState(null); // null | 'move'
+  const [targetCategory, setTargetCategory] = useState('');
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+
   useEffect(() => { fetchImages(); }, []);
 
   const fetchImages = async () => {
@@ -43,9 +50,77 @@ const ManageGallery = () => {
   };
 
   useEffect(() => {
+    setSelectedIds([]);
     if (activeCategory === 'الكل') setFiltered(images);
     else setFiltered(images.filter(img => img.category === activeCategory));
   }, [activeCategory, images]);
+
+  const handleSelectImage = (id) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.length === filtered.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filtered.map(img => img.id));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (!window.confirm(`هل أنت متأكد من حذف ${selectedIds.length} صورة نهائياً؟`)) return;
+    setBulkActionLoading(true);
+    try {
+      await api.bulkDeleteGallery(selectedIds);
+      showToast(`تم حذف ${selectedIds.length} صورة بنجاح`);
+      setSelectedIds([]);
+      fetchImages();
+    } catch {
+      showToast('حدث خطأ في عملية الحذف الجماعي', 'error');
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkVisibility = async (isVisible) => {
+    if (selectedIds.length === 0) return;
+    setBulkActionLoading(true);
+    try {
+      await api.bulkUpdateGalleryVisibility(selectedIds, isVisible);
+      showToast(`تم تحديث ظهور ${selectedIds.length} صورة بنجاح`);
+      setSelectedIds([]);
+      fetchImages();
+    } catch {
+      showToast('حدث خطأ في عملية تعديل الظهور الجماعي', 'error');
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkMove = async (e) => {
+    e.preventDefault();
+    if (selectedIds.length === 0) return;
+    const finalCategory = targetCategory === 'new' ? newCategoryName.trim() : targetCategory;
+    if (!finalCategory) {
+      showToast('يرجى تحديد أو كتابة اسم المجلد/التصنيف', 'error');
+      return;
+    }
+    setBulkActionLoading(true);
+    try {
+      await api.bulkUpdateGalleryCategory(selectedIds, finalCategory);
+      showToast(`تم نقل ${selectedIds.length} صورة إلى "${finalCategory}"`);
+      setBulkModal(null);
+      setTargetCategory('');
+      setNewCategoryName('');
+      setSelectedIds([]);
+      fetchImages();
+    } catch {
+      showToast('حدث خطأ في نقل الصور', 'error');
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
 
   const showToast = (msg, type = 'success') => {
     const id = Date.now();
@@ -209,6 +284,78 @@ const ManageGallery = () => {
         ))}
       </div>
 
+      {/* Bulk Actions Panel */}
+      {filtered.length > 0 && (
+        <div style={{
+          ...card,
+          padding: '12px 20px',
+          marginBottom: 20,
+          background: isDarkMode ? 'rgba(0, 48, 135, 0.15)' : 'rgba(0, 48, 135, 0.04)',
+          border: `1px solid ${isDarkMode ? 'rgba(0, 168, 232, 0.2)' : 'rgba(0, 48, 135, 0.15)'}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 12,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontWeight: 700, fontSize: '0.85rem', color: isDarkMode ? '#fff' : '#003087' }}>
+              <input
+                type="checkbox"
+                checked={selectedIds.length === filtered.length && filtered.length > 0}
+                ref={el => {
+                  if (el) {
+                    el.indeterminate = selectedIds.length > 0 && selectedIds.length < filtered.length;
+                  }
+                }}
+                onChange={handleSelectAll}
+                style={{ width: 18, height: 18, accentColor: '#0066cc', cursor: 'pointer' }}
+              />
+              تحديد الكل ({filtered.length})
+            </label>
+            {selectedIds.length > 0 && (
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0066cc', fontFamily: 'Cairo, sans-serif' }}>
+                تم تحديد {selectedIds.length} صورة
+              </span>
+            )}
+          </div>
+
+          {selectedIds.length > 0 && (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button
+                onClick={() => setBulkModal('move')}
+                disabled={bulkActionLoading}
+                style={{ ...btnStyle('#0066cc'), padding: '6px 14px' }}
+              >
+                نقل لمجلد/تصنيف
+              </button>
+              <button
+                onClick={() => handleBulkVisibility(true)}
+                disabled={bulkActionLoading}
+                style={{ ...btnStyle('#059669'), padding: '6px 14px' }}
+              >
+                إظهار المحدد
+              </button>
+              <button
+                onClick={() => handleBulkVisibility(false)}
+                disabled={bulkActionLoading}
+                style={{ ...btnStyle('#d97706'), padding: '6px 14px' }}
+              >
+                إخفاء المحدد
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={bulkActionLoading}
+                style={{ ...btnStyle('#dc2626'), padding: '6px 14px' }}
+              >
+                {bulkActionLoading ? <FaSpinner style={{ animation: 'spin 1s linear infinite' }} /> : <FaTrash />}
+                حذف المحدد
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Images Grid */}
       {loading ? (
         <div style={{ textAlign: 'center', padding: '80px 0' }}>
@@ -231,6 +378,22 @@ const ManageGallery = () => {
               }}>
               {/* Thumbnail */}
               <div style={{ position: 'relative', paddingTop: '65%', background: isDarkMode ? 'rgba(0,0,0,0.3)' : 'rgba(0,48,135,0.05)' }}>
+                {/* Selection Checkbox */}
+                <div style={{ position: 'absolute', top: 8, left: 8, zIndex: 10 }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(img.id)}
+                    onChange={() => handleSelectImage(img.id)}
+                    style={{
+                      width: 18,
+                      height: 18,
+                      cursor: 'pointer',
+                      accentColor: '#0066cc',
+                      border: '2px solid #fff',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                    }}
+                  />
+                </div>
                 <img src={img.image_url} alt={img.title_ar || ''} style={{
                   position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
                 }} loading="lazy" onError={e => { e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100%" height="100%" fill="%23eee"/></svg>'; }} />
@@ -382,6 +545,98 @@ const ManageGallery = () => {
                   }}>
                     {formLoading ? <FaSpinner style={{ animation: 'spin 1s linear infinite' }} /> : (modal === 'add' ? <FaPlus /> : <FaEdit />)}
                     {formLoading ? 'جارٍ الحفظ...' : (modal === 'add' ? 'إضافة الصورة' : 'حفظ التعديلات')}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+        {/* Bulk Move Category Modal */}
+        {bulkModal === 'move' && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => setBulkModal(null)}
+            style={{ position: 'fixed', inset: 0, zIndex: 5000, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <motion.div initial={{ opacity: 0, scale: 0.93, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.93 }}
+              onClick={e => e.stopPropagation()}
+              style={{
+                ...card, width: '100%', maxWidth: 450, padding: 28,
+              }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: isDarkMode ? '#fff' : '#003087', fontFamily: 'Cairo, sans-serif' }}>
+                  نقل {selectedIds.length} صورة إلى مجلد/تصنيف
+                </h3>
+                <button onClick={() => setBulkModal(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDarkMode ? 'rgba(255,255,255,0.5)' : '#888', fontSize: '1.1rem' }}>
+                  <FaTimes />
+                </button>
+              </div>
+
+              <form onSubmit={handleBulkMove} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 700, color: isDarkMode ? 'rgba(255,255,255,0.7)' : '#003087', display: 'block', marginBottom: 8, fontFamily: 'Cairo, sans-serif' }}>
+                    اختر مجلد/تصنيف موجود
+                  </label>
+                  <select
+                    value={targetCategory}
+                    onChange={e => {
+                      setTargetCategory(e.target.value);
+                      if (e.target.value !== 'new') setNewCategoryName('');
+                    }}
+                    style={{
+                      width: '100%', padding: '10px 14px', borderRadius: 10,
+                      border: `1.5px solid ${isDarkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,48,135,0.2)'}`,
+                      background: isDarkMode ? 'rgba(255,255,255,0.05)' : '#fff',
+                      color: isDarkMode ? '#fff' : '#1a2850',
+                      fontFamily: 'Cairo, sans-serif', fontSize: '0.88rem', outline: 'none',
+                    }}
+                  >
+                    <option value="">-- اختر تصنيف --</option>
+                    {categories.filter(c => c !== 'الكل').map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                    <option value="new">+ إنشاء مجلد/تصنيف جديد...</option>
+                  </select>
+                </div>
+
+                {targetCategory === 'new' && (
+                  <div>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 700, color: isDarkMode ? 'rgba(255,255,255,0.7)' : '#003087', display: 'block', marginBottom: 6, fontFamily: 'Cairo, sans-serif' }}>
+                      اسم المجلد/التصنيف الجديد
+                    </label>
+                    <input
+                      type="text"
+                      value={newCategoryName}
+                      onChange={e => setNewCategoryName(e.target.value)}
+                      placeholder="أدخل اسم المجلد الجديد"
+                      required
+                      style={{
+                        width: '100%', boxSizing: 'border-box',
+                        padding: '10px 14px', borderRadius: 10,
+                        border: `1.5px solid ${isDarkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,48,135,0.2)'}`,
+                        background: isDarkMode ? 'rgba(255,255,255,0.05)' : '#fff',
+                        color: isDarkMode ? '#fff' : '#1a2850',
+                        fontFamily: 'Cairo, sans-serif', fontSize: '0.88rem', outline: 'none',
+                      }}
+                    />
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 10 }}>
+                  <button type="button" onClick={() => setBulkModal(null)} style={{
+                    padding: '10px 18px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                    background: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,48,135,0.08)',
+                    color: isDarkMode ? '#fff' : '#003087', fontFamily: 'Cairo, sans-serif', fontWeight: 700,
+                  }}>
+                    إلغاء
+                  </button>
+                  <button type="submit" disabled={bulkActionLoading} style={{
+                    padding: '10px 22px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                    background: 'linear-gradient(135deg,#003087,#0066cc)',
+                    color: '#fff', fontFamily: 'Cairo, sans-serif', fontWeight: 800,
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    boxShadow: '0 4px 14px rgba(0,48,135,0.3)',
+                  }}>
+                    {bulkActionLoading && <FaSpinner style={{ animation: 'spin 1s linear infinite' }} />}
+                    تأكيد النقل
                   </button>
                 </div>
               </form>

@@ -6,7 +6,8 @@ import {
   FaTachometerAlt, FaNewspaper, FaFileAlt, FaSignOutAlt,
   FaBuilding, FaBars, FaTimes, FaUsers, FaMoon, FaSun,
   FaPlusCircle, FaMapMarkedAlt, FaChartLine, FaBell,
-  FaChevronDown, FaUser, FaImages, FaRegBuilding, FaInfoCircle
+  FaChevronDown, FaUser, FaImages, FaRegBuilding, FaInfoCircle,
+  FaClipboardList, FaPaperPlane, FaShieldAlt
 } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
@@ -21,13 +22,50 @@ const DashboardLayout = () => {
   const [profileOpen, setProfileOpen] = useState(false);
 
   const { user: loggedInUser, logout } = useAuth();
-  const safeUser = loggedInUser || { username: 'زائر', role_id: 3, role: { name: 'موظف', slug: 'employee' } };
+
+  const rawRoleId = String(loggedInUser?.role_id || '');
+  const rawRoleSlug = loggedInUser?.role_slug || loggedInUser?.role?.slug || (typeof loggedInUser?.role === 'string' ? loggedInUser?.role : '');
+  const username = (loggedInUser?.username || '').toLowerCase();
+
+  let userRoleSlug = 'employee';
+  let userRoleName = 'موظف';
+
+  if (
+    rawRoleId === '1' ||
+    rawRoleSlug === 'admin' ||
+    loggedInUser?.role === 'admin' ||
+    loggedInUser?.role === 'مسؤول النظام' ||
+    loggedInUser?.role_name === 'مسؤول النظام' ||
+    username === 'admin'
+  ) {
+    userRoleSlug = 'admin';
+    userRoleName = 'مسؤول النظام';
+  } else if (
+    rawRoleId === '2' ||
+    rawRoleSlug === 'data_entry' ||
+    loggedInUser?.role === 'data_entry' ||
+    loggedInUser?.role === 'مدخل بيانات' ||
+    loggedInUser?.role_name === 'مدخل بيانات'
+  ) {
+    userRoleSlug = 'data_entry';
+    userRoleName = 'مدخل بيانات';
+  }
+
+  const safeUser = {
+    username: loggedInUser?.username || 'زائر',
+    role_id: loggedInUser?.role_id || (userRoleSlug === 'admin' ? 1 : userRoleSlug === 'data_entry' ? 2 : 3),
+    role: {
+      name: userRoleName,
+      slug: userRoleSlug,
+    }
+  };
 
   useEffect(() => {
-    if (safeUser.role?.slug === 'employee' && location.pathname !== '/dashboard' && !location.pathname.startsWith('/dashboard/manage-map')) {
+    // Only redirect if explicitly a basic employee without management privileges
+    if (safeUser.role.slug === 'employee' && safeUser.role_id === 3 && location.pathname !== '/dashboard' && !location.pathname.startsWith('/dashboard/manage-map') && !location.pathname.startsWith('/dashboard/submit-requests')) {
       navigate('/dashboard');
     }
-  }, [location.pathname, safeUser.role?.slug, navigate]);
+  }, [location.pathname, safeUser.role.slug, safeUser.role_id, navigate]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -60,8 +98,12 @@ const DashboardLayout = () => {
     { path: '/dashboard/manage-pages', name: 'إدارة الصفحات', icon: <FaFileAlt />, roles: ['admin', 'data_entry'] },
     { path: '/dashboard/manage-stats', name: 'الإحصائيات', icon: <FaChartLine />, roles: ['admin', 'data_entry'] },
     { path: '/dashboard/companies', name: 'الشركات', icon: <FaRegBuilding />, roles: ['admin', 'data_entry'] },
+    { path: '/dashboard/requests', name: 'الطلبات الواردة', icon: <FaClipboardList />, roles: ['admin', 'data_entry'] },
+    { path: '/dashboard/submit-requests', name: 'تقديم الطلبات', icon: <FaPaperPlane />, roles: ['admin', 'data_entry', 'employee'] },
+    { path: '/dashboard/audit-logs', name: 'سجلات التدقيق', icon: <FaShieldAlt />, roles: ['admin', 'data_entry'] },
     { path: '/dashboard/manage-gallery', name: 'إدارة معرض الصور', icon: <FaImages />, roles: ['admin', 'data_entry'] },
-    { path: '/dashboard/user-management', name: 'إدارة المستخدمين', icon: <FaUsers />, roles: ['admin'] },
+    { path: '/dashboard/manage-home-images', name: 'صور الصفحة الرئيسية', icon: <FaImages />, roles: ['admin', 'data_entry'] },
+    { path: '/dashboard/user-management', name: 'إدارة المستخدمين', icon: <FaUsers />, roles: ['admin', 'data_entry'] },
     { path: '/dashboard/internal-news', name: 'الأخبار الداخلية', icon: <FaNewspaper />, roles: ['admin', 'data_entry'] },
   ];
 
@@ -77,23 +119,53 @@ const DashboardLayout = () => {
 
   const SidebarContent = () => (
     <>
-      {/* Logo */}
-      <div style={{ padding: '0 20px 30px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+      {/* Logo & User Header */}
+      <div style={{ padding: '0 20px 24px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
         <div className="d-flex align-items-center gap-3">
-          <div style={{ width: 46, height: 46, borderRadius: 12, background: 'var(--card-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: '3px' }}>
+          <div style={{
+            width: 48,
+            height: 48,
+            borderRadius: 14,
+            background: 'linear-gradient(135deg, #ffffff 0%, #f0f6ff 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            padding: '5px',
+            boxShadow: '0 4px 14px rgba(0,0,0,0.3)',
+            border: '1.5px solid rgba(255,255,255,0.4)',
+          }}>
             <img
               src="/logo.png"
               alt="شعار الهيئة"
               style={{ width: '100%', height: '100%', objectFit: 'contain' }}
             />
           </div>
-          <div>
-            <div style={{ color: '#fff', fontWeight: 800, fontSize: '0.95rem', lineHeight: 1.2 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+            <span style={{
+              color: '#38bdf8',
+              fontWeight: 700,
+              fontSize: '0.78rem',
+              letterSpacing: '0.02em',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}>
               بوابة {safeUser.role.name}
-            </div>
-            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>
+            </span>
+            <span style={{
+              color: '#ffffff',
+              fontWeight: 900,
+              fontSize: '1.1rem',
+              lineHeight: 1.25,
+              textShadow: '0 2px 8px rgba(0,0,0,0.4)',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              fontFamily: 'Tajawal, sans-serif'
+            }}>
               {safeUser.username}
-            </div>
+            </span>
           </div>
         </div>
       </div>
@@ -303,45 +375,67 @@ const DashboardLayout = () => {
             {/* Custom Profile Dropdown Toggle Pill */}
             <div ref={profileRef} style={{ position: 'relative' }}>
               <motion.button
-                whileHover={{ scale: 1.02, boxShadow: '0 4px 15px rgba(0,48,135,0.06)' }}
-                whileTap={{ scale: 0.98 }}
+                whileHover={{ scale: 1.03, boxShadow: isDark ? '0 6px 24px rgba(0,48,135,0.35)' : '0 6px 20px rgba(0,48,135,0.15)' }}
+                whileTap={{ scale: 0.97 }}
                 onClick={() => setProfileOpen(prev => !prev)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 10,
-                  padding: '5px 16px 5px 6px',
+                  gap: 12,
+                  padding: '6px 18px 6px 6px',
                   borderRadius: 99,
-                  background: 'var(--card-bg)',
-                  border: '1px solid var(--border)',
-                  boxShadow: '0 2px 8px rgba(0,48,135,0.02)',
-                  transition: 'all 0.2s',
+                  background: isDark
+                    ? 'linear-gradient(135deg, rgba(0,48,135,0.55) 0%, rgba(0,30,80,0.55) 100%)'
+                    : 'linear-gradient(135deg, rgba(0,48,135,0.07) 0%, rgba(0,80,200,0.05) 100%)',
+                  border: isDark ? '1.5px solid rgba(255,255,255,0.12)' : '1.5px solid rgba(0,48,135,0.18)',
+                  boxShadow: isDark ? '0 2px 12px rgba(0,0,0,0.25)' : '0 2px 10px rgba(0,48,135,0.08)',
+                  transition: 'all 0.25s',
                   color: 'var(--text)',
                   cursor: 'pointer',
-                  fontWeight: 600,
-                  fontSize: '0.86rem'
                 }}
               >
+                {/* Avatar Circle */}
                 <div style={{
-                  width: 30,
-                  height: 30,
+                  width: 38,
+                  height: 38,
                   borderRadius: '50%',
-                  background: 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)',
+                  background: 'linear-gradient(135deg, #003087 0%, #0066cc 100%)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   color: '#fff',
-                  fontWeight: 800,
-                  fontSize: '0.85rem',
-                  boxShadow: '0 2px 8px rgba(0,48,135,0.15)',
-                  flexShrink: 0
+                  fontWeight: 900,
+                  fontSize: '1rem',
+                  boxShadow: '0 3px 10px rgba(0,48,135,0.35)',
+                  flexShrink: 0,
+                  border: '2px solid rgba(255,255,255,0.25)',
+                  letterSpacing: 0,
+                  textTransform: 'uppercase',
                 }}>
                   {safeUser.username.charAt(0)}
                 </div>
-                <span className="d-none d-md-inline" style={{ fontWeight: 700 }}>
-                  {safeUser.username}
-                </span>
-                <FaChevronDown size={11} style={{ opacity: 0.7, transition: 'transform 0.2s', transform: profileOpen ? 'rotate(180deg)' : 'none' }} />
+                {/* Username & Role */}
+                <div className="d-none d-md-flex flex-column" style={{ lineHeight: 1.2, gap: 1 }}>
+                  <span style={{
+                    fontWeight: 800,
+                    fontSize: '0.95rem',
+                    color: isDark ? '#e8f0ff' : '#001d5a',
+                    letterSpacing: 0.2,
+                    fontFamily: 'Tajawal, sans-serif',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {safeUser.username}
+                  </span>
+                  <span style={{
+                    fontSize: '0.7rem',
+                    color: isDark ? 'rgba(160,190,255,0.75)' : 'rgba(0,48,135,0.6)',
+                    fontWeight: 500,
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {safeUser.role.name}
+                  </span>
+                </div>
+                <FaChevronDown size={11} style={{ opacity: 0.6, transition: 'transform 0.25s', transform: profileOpen ? 'rotate(180deg)' : 'none', color: isDark ? 'rgba(160,190,255,0.8)' : 'rgba(0,48,135,0.7)', marginInlineStart: 2 }} />
               </motion.button>
 
               <AnimatePresence>

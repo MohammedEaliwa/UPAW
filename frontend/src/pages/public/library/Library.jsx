@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTheme } from '../../../context/ThemeContext';
 import { useLanguage } from '../../../context/LanguageContext';
 import { motion } from 'framer-motion';
-import { FaBookOpen, FaSpinner, FaFileCsv } from 'react-icons/fa';
+import { FaBookOpen, FaSpinner } from 'react-icons/fa';
 import { api } from '../../../services/api';
 import DataTable from '../../../components/DataTable';
 import './library.css';
@@ -14,7 +14,6 @@ const Library = () => {
   const isRtl = !isEn;
 
   const [books, setBooks] = useState([]);
-  const [displayed, setDisplayed] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
@@ -22,27 +21,30 @@ const Library = () => {
   const [sortConfig, setSortConfig] = useState({ key: 'serial_number', dir: 'asc' });
 
   useEffect(() => {
+    let active = true;
+    const fetchBooks = async () => {
+      try {
+        const data = await api.getBooks();
+        if (active) {
+          setBooks(Array.isArray(data) ? data : []);
+          setLoading(false);
+        }
+      } catch (e) {
+        console.error('Error fetching books:', e);
+        if (active) {
+          setBooks([]);
+          setLoading(false);
+        }
+      }
+    };
     fetchBooks();
+    return () => {
+      active = false;
+    };
   }, []);
 
-  const fetchBooks = async () => {
-    setLoading(true);
-    try {
-      const data = await api.getBooks();
-      const books = Array.isArray(data) ? data : [];
-      setBooks(books);
-      setDisplayed(books);
-    } catch (e) {
-      console.error('Error fetching books:', e);
-      setBooks([]);
-      setDisplayed([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Filter and sort books whenever dependencies change
-  useEffect(() => {
+  // Filter and sort books whenever dependencies change using useMemo for high performance and pure render
+  const displayed = useMemo(() => {
     let result = [...books];
 
     // Search
@@ -78,7 +80,7 @@ const Library = () => {
       });
     }
 
-    setDisplayed(result);
+    return result;
   }, [books, search, sortConfig]);
 
   // Sliced data for the current page

@@ -58,7 +58,7 @@ const ManageAbout = () => {
         let tree = d.leadership_tree;
         if (!tree || typeof tree !== 'object' || !tree.president) {
           tree = {
-            president: { name_ar: 'د. أحمد التومي', name_en: 'Dr. Ahmed Al-Toumi', title_ar: 'رئيس الهيئة', title_en: 'Head of the Authority', img: 'http://localhost:5000/uploads/director_image.jpg' },
+            president: { name_ar: 'د. أحمد التومي', name_en: 'Dr. Ahmed Al-Toumi', title_ar: 'رئيس الهيئة', title_en: 'Head of the Authority', img: window.location.origin + '/uploads/director_image.jpg' },
             offices: [
               { id: '1', title_ar: 'مكتب الرئيس', title_en: 'President Office', name_ar: '', name_en: '', img: '' },
               { id: '2', title_ar: 'مكتب التخطيط', title_en: 'Planning Office', name_ar: '', name_en: '', img: '' },

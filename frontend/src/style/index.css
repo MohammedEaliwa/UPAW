@@ -153,27 +153,27 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Dashboard-specific heading color: enforce dark-blue in light mode only */
-.dashboard-content h1,
-.dashboard-content h2,
-.dashboard-content h3,
-.dashboard-content h4,
-.dashboard-content h5,
-.dashboard-content h6,
+.dashboard-content h1:not(.text-white),
+.dashboard-content h2:not(.text-white),
+.dashboard-content h3:not(.text-white),
+.dashboard-content h4:not(.text-white),
+.dashboard-content h5:not(.text-white),
+.dashboard-content h6:not(.text-white),
 .dashboard-content .text-primary,
 .dashboard-content .fw-bold.text-primary {
-  color: #00275a !important; /* dark-blue */
+  color: #00275a;
 }
 
 /* Keep dark mode untouched: revert to existing variables when theme=dark */
-html[data-bs-theme="dark"] .dashboard-content h1,
-html[data-bs-theme="dark"] .dashboard-content h2,
-html[data-bs-theme="dark"] .dashboard-content h3,
-html[data-bs-theme="dark"] .dashboard-content h4,
-html[data-bs-theme="dark"] .dashboard-content h5,
-html[data-bs-theme="dark"] .dashboard-content h6,
+html[data-bs-theme="dark"] .dashboard-content h1:not(.text-white),
+html[data-bs-theme="dark"] .dashboard-content h2:not(.text-white),
+html[data-bs-theme="dark"] .dashboard-content h3:not(.text-white),
+html[data-bs-theme="dark"] .dashboard-content h4:not(.text-white),
+html[data-bs-theme="dark"] .dashboard-content h5:not(.text-white),
+html[data-bs-theme="dark"] .dashboard-content h6:not(.text-white),
 html[data-bs-theme="dark"] .dashboard-content .text-primary,
 html[data-bs-theme="dark"] .dashboard-content .fw-bold.text-primary {
-  color: var(--primary) !important;
+  color: var(--primary);
 }
 
 /* Scrollbar */
@@ -214,52 +214,96 @@ html[data-bs-theme="dark"] .dashboard-content .fw-bold.text-primary {
 }
 
 /* =================== BUTTONS =================== */
+
+/* Shimmer animation for primary button */
+@keyframes btnShimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
 .btn-primary-custom {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  /* تدرج أخضر داكن → فيروزي مستوحى من شعار الهيئة */
+  background: linear-gradient(135deg, #1B6B3A 0%, #178B55 40%, #26C6DA 100%);
+  background-size: 200% auto;
   border: none;
-  color: #fff;
+  color: #ffffff !important;
   font-weight: 700;
-  padding: 12px 32px;
+  padding: 13px 36px;
   border-radius: 99px;
-  transition: var(--transition);
-  box-shadow: 0 4px 20px rgba(0, 48, 135, 0.3);
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 6px 24px rgba(27, 107, 58, 0.45),
+              0 1px 4px rgba(0, 0, 0, 0.2);
   font-size: 1rem;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  letter-spacing: 0.4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary-custom::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg,
+    transparent 40%,
+    rgba(255,255,255,0.18) 50%,
+    transparent 60%);
+  background-size: 200% 100%;
+  background-position: -200% center;
+  border-radius: inherit;
+  transition: none;
+}
+
+.btn-primary-custom:hover::before {
+  animation: btnShimmer 0.6s linear forwards;
 }
 
 .btn-primary-custom:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(0, 48, 135, 0.45);
-  color: #fff;
-  background: linear-gradient(135deg, var(--primary-light) 0%, var(--accent) 100%);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(27, 107, 58, 0.55),
+              0 3px 8px rgba(0, 0, 0, 0.15);
+  color: #ffffff !important;
+  background-position: right center;
 }
 
 .btn-primary-custom:active {
   transform: translateY(0);
+  box-shadow: 0 3px 12px rgba(27, 107, 58, 0.4);
 }
 
-.btn-outline-custom {
-  background: transparent;
-  border: 2px solid rgba(255,255,255,0.7);
-  color: #fff;
+/* ---- Outline Brand Button (no border-image → uses box-shadow instead) ---- */
+.btn-outline-brand {
+  background: rgba(255, 255, 255, 0.07);
+  border: 2px solid rgba(255, 255, 255, 0.65);
+  color: #ffffff !important;
   font-weight: 700;
-  padding: 10px 30px;
+  padding: 11px 34px;
   border-radius: 99px;
-  transition: var(--transition);
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   font-size: 1rem;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  letter-spacing: 0.4px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
-.btn-outline-custom:hover {
-  background: rgba(255,255,255,0.15);
-  border-color: #fff;
-  transform: translateY(-2px);
+.btn-outline-brand:hover {
+  background: rgba(38, 198, 218, 0.18);
+  border-color: #26C6DA;
+  color: #ffffff !important;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 28px rgba(38, 198, 218, 0.35),
+              0 0 0 1px rgba(38, 198, 218, 0.4);
+}
+
+.btn-outline-brand:active {
+  transform: translateY(0);
 }
 
 /* =================== CARDS =================== */
@@ -269,7 +313,7 @@ html[data-bs-theme="dark"] .dashboard-content .fw-bold.text-primary {
   border-radius: var(--radius) !important;
   box-shadow: var(--shadow-sm);
   transition: var(--transition);
-  overflow: hidden;
+  /* overflow: hidden removed — was clipping card shadows at bottom */
 }
 
 .card-custom:hover {
@@ -309,7 +353,8 @@ html[data-bs-theme="dark"] .dashboard-content .fw-bold.text-primary {
   background:
     var(--hero-gradient),
     url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070&auto=format&fit=crop')
-    center/cover no-repeat fixed;
+    center/cover no-repeat;
+  /* NOTE: background-attachment:fixed removed — breaks iOS Safari */
 }
 
 .hero-section::before {
@@ -379,6 +424,9 @@ html[data-bs-theme="dark"] .dashboard-content .fw-bold.text-primary {
   line-height: 1.8;
   max-width: 580px;
 }
+@media (max-width: 768px) {
+  .hero-subtitle { max-width: 100%; }
+}
 
 .hero-stats {
   display: flex;
@@ -391,7 +439,7 @@ html[data-bs-theme="dark"] .dashboard-content .fw-bold.text-primary {
 }
 
 .hero-stat-num {
-  font-size: 2.2rem;
+  font-size: clamp(1.7rem, 4vw, 2.2rem);
   font-weight: 900;
   color: #fff;
   line-height: 1;
@@ -484,6 +532,12 @@ html[data-bs-theme="dark"] .dashboard-content .fw-bold.text-primary {
   transition: transform 0.5s ease;
   width: 100%;
 }
+@media (max-width: 768px) {
+  .news-card .news-img { height: 180px; }
+}
+@media (max-width: 480px) {
+  .news-card .news-img { height: 160px; }
+}
 
 .news-card:hover .news-img {
   transform: scale(1.05);
@@ -508,6 +562,12 @@ html[data-bs-theme="dark"] .dashboard-content .fw-bold.text-primary {
   position: relative;
   overflow: hidden;
 }
+@media (max-width: 768px) {
+  .footer-custom { padding: 40px 0 24px; }
+}
+@media (max-width: 480px) {
+  .footer-custom { padding: 32px 0 20px; }
+}
 
 .footer-custom::before {
   content: '';
@@ -518,6 +578,8 @@ html[data-bs-theme="dark"] .dashboard-content .fw-bold.text-primary {
   height: 400px;
   background: radial-gradient(circle, rgba(0,168,232,0.06) 0%, transparent 70%);
 }
+
+/* Duplicate simple .btn-outline-brand definition removed – premium version defined earlier */
 
 .footer-link {
   color: rgba(255,255,255,0.65);
@@ -539,43 +601,60 @@ html[data-bs-theme="dark"] .dashboard-content .fw-bold.text-primary {
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.25);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255,255,255,0.7);
+  color: #ffffff !important;
   transition: var(--transition);
   text-decoration: none;
 }
 
+.footer-icon-link svg,
+.footer-icon-link i {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+}
+
 .footer-icon-link:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: white;
-  transform: translateY(-3px);
+  background: linear-gradient(135deg, #1B6B3A 0%, #26C6DA 100%);
+  border-color: #26C6DA;
+  color: #ffffff !important;
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(38,198,218,0.4);
+}
+
+.footer-icon-link:hover svg,
+.footer-icon-link:hover i {
+  color: #ffffff !important;
+  fill: #ffffff !important;
 }
 
 .footer-portal-btn {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  background: linear-gradient(135deg, var(--accent) 0%, var(--secondary) 100%);
-  color: white;
+  background: linear-gradient(135deg, #1B6B3A 0%, #26C6DA 100%);
+  color: #ffffff !important;
   font-weight: 700;
   padding: 12px 28px;
   border-radius: 99px;
   text-decoration: none;
   transition: var(--transition);
-  box-shadow: 0 4px 20px rgba(0, 168, 232, 0.3);
+  box-shadow: 0 4px 20px rgba(38,198,218,0.35);
   font-size: 1rem;
+}
+
+.footer-portal-btn * {
+  color: #ffffff !important;
 }
 
 .footer-portal-btn:hover {
   transform: translateY(-3px);
-  box-shadow: 0 8px 30px rgba(0, 168, 232, 0.5);
-  color: white;
-  background: linear-gradient(135deg, var(--secondary) 0%, var(--accent) 100%);
+  box-shadow: 0 8px 30px rgba(38,198,218,0.55);
+  color: #ffffff !important;
+  background: linear-gradient(135deg, #26C6DA 0%, #1B6B3A 100%);
 }
 
 /* =================== DASHBOARD =================== */
@@ -718,36 +797,61 @@ html[data-bs-theme="dark"] .dashboard-content .fw-bold.text-primary {
   background: linear-gradient(to top, rgba(0,29,90,0.6) 0%, transparent 50%);
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  .hero-section { 
-    min-height: 100vh; 
-    padding: 100px 0 60px;
+/* =============================================
+   RESPONSIVE BREAKPOINTS
+   xs<576 | sm<768 | md<992 | lg<1200 | xl<1400
+   ============================================= */
+
+/* ── Large tablet (992px–1199px) ── */
+@media (max-width: 1199px) {
+  .hero-section { min-height: auto; padding: 110px 0 70px; }
+  .auth-card { padding: 40px 32px; }
+}
+
+/* ── Tablet / small laptop (768px–991px) ── */
+@media (max-width: 991px) {
+  .hero-section { padding: 100px 0 60px; }
+  .hero-title { font-size: clamp(2rem, 5vw, 3rem) !important; }
+  .section-title { font-size: clamp(1.6rem, 4vw, 2rem); }
+  .auth-card { padding: 36px 28px; }
+}
+
+/* ── Mobile landscape / large phone (576px–767px) ── */
+@media (max-width: 767px) {
+  .hero-section {
+    min-height: 100svh;
+    padding: 90px 0 50px;
+    text-align: center;
   }
-  .hero-title { 
-    font-size: 2.2rem; 
-    line-height: 1.35;
-  }
-  .hero-subtitle {
-    font-size: 0.95rem;
-  }
-  .auth-card { 
-    padding: 35px 25px; 
-  }
-  .card-custom {
-    padding: 24px 20px !important;
-  }
-  .papers-row-card {
-    padding: 20px !important;
-    gap: 16px !important;
-  }
-  .news-card {
-    flex-direction: column !important;
-  }
+  .hero-title { font-size: clamp(1.9rem, 6vw, 2.6rem) !important; line-height: 1.3 !important; }
+  .hero-subtitle { font-size: 0.95rem !important; max-width: 100% !important; }
+  .auth-card { padding: 32px 22px; }
+  .card-custom { padding: 22px 18px !important; }
+  .papers-row-card { padding: 18px !important; gap: 14px !important; }
+  .news-card { flex-direction: column !important; }
   .news-card div[style*="width: 45%"], .news-card div[style*="width: 40%"] {
-    width: 100% !important;
-    height: 200px !important;
+    width: 100% !important; height: 200px !important;
   }
+  /* Buttons larger touch targets */
+  .btn-primary-custom, .btn-outline-brand {
+    padding: 12px 26px !important;
+    font-size: 0.95rem !important;
+  }
+  /* Section spacing reduced */
+  .py-6 { padding-top: 48px !important; padding-bottom: 48px !important; }
+}
+
+/* ── Small phone (< 576px) ── */
+@media (max-width: 575px) {
+  .hero-title { font-size: 1.85rem !important; }
+  .hero-subtitle { font-size: 0.9rem !important; }
+  .hero-badge { font-size: 0.78rem !important; padding: 4px 12px !important; }
+  .section-title { font-size: 1.5rem; }
+  .auth-card { padding: 28px 18px; margin: 0 12px; }
+  .py-6 { padding-top: 36px !important; padding-bottom: 36px !important; }
+  /* Touch-friendly min sizes */
+  button, .btn, a.btn { min-height: 44px; }
+  .footer-link { min-height: 40px; }
 }
 
 /* Premium Visual Polish */
@@ -797,25 +901,6 @@ html[data-bs-theme="dark"] .dashboard-content .fw-bold.text-primary {
   opacity: 1;
 }
 
-.btn-primary-custom {
-  position: relative;
-  overflow: hidden;
-}
-
-.btn-primary-custom::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-  transition: all 0.6s ease;
-}
-
-.btn-primary-custom:hover::after {
-  left: 100%;
-}
 
 /* ================================================================
    DARK MODE – COMPREHENSIVE TEXT VISIBILITY FIX
@@ -824,12 +909,6 @@ html[data-bs-theme="dark"] .dashboard-content .fw-bold.text-primary {
 
 html[data-bs-theme="dark"] body,
 html[data-bs-theme="dark"] p,
-html[data-bs-theme="dark"] h1,
-html[data-bs-theme="dark"] h2,
-html[data-bs-theme="dark"] h3,
-html[data-bs-theme="dark"] h4,
-html[data-bs-theme="dark"] h5,
-html[data-bs-theme="dark"] h6,
 html[data-bs-theme="dark"] label,
 html[data-bs-theme="dark"] .form-label,
 html[data-bs-theme="dark"] li,
@@ -844,6 +923,65 @@ html[data-bs-theme="dark"] .modal-body,
 html[data-bs-theme="dark"] .modal-footer {
   color: var(--text) !important;
 }
+
+/* العناوين في وضع الداكن — اللون الفاتح */
+/* زر النص أبيض في الوضع الداكن */
+html[data-bs-theme="dark"] .btn-primary-custom,
+html[data-bs-theme="dark"] .btn-primary-custom:hover,
+html[data-bs-theme="dark"] .btn-outline-brand,
+html[data-bs-theme="dark"] .btn-outline-brand:hover {
+  color: #fff !important;
+}
+
+/* العناوين في وضع الداكن — اللون الفاتح */
+html[data-bs-theme="dark"] h1,
+html[data-bs-theme="dark"] h2,
+html[data-bs-theme="dark"] h3,
+html[data-bs-theme="dark"] h4,
+html[data-bs-theme="dark"] h5,
+html[data-bs-theme="dark"] h6 {
+  color: var(--text) !important;
+}
+
+/* زر النص أبيض في الوضع الداكن – تحسين للأزرار */
+html[data-bs-theme="dark"] .btn-primary-custom,
+html[data-bs-theme="dark"] .btn-primary-custom:hover,
+html[data-bs-theme="dark"] .btn-outline-brand,
+html[data-bs-theme="dark"] .btn-outline-brand:hover {
+  color: #fff !important;
+}
+/* مزيد من تحديد اللون للنص داخل الأزرار في وضع الداكن */
+html[data-bs-theme="dark"] .btn-primary-custom *,
+html[data-bs-theme="dark"] .btn-outline-brand * {
+  color: #fff !important;
+}
+
+
+
+
+/* العناوين داخل الأقسام الداكنة تبقى بيضاء حتى في الداكن مود — specificity أعلى */
+html[data-bs-theme="dark"] .dynamic-page-header h1,
+html[data-bs-theme="dark"] .dynamic-page-header h2,
+html[data-bs-theme="dark"] .dynamic-page-header h3,
+html[data-bs-theme="dark"] .dynamic-page-header h4,
+html[data-bs-theme="dark"] .dynamic-page-header h5,
+html[data-bs-theme="dark"] .dynamic-page-header h6,
+html[data-bs-theme="dark"] .dynamic-page-header p,
+html[data-bs-theme="dark"] .dynamic-page-header span,
+html[data-bs-theme="dark"] .dark-hero-section h1,
+html[data-bs-theme="dark"] .dark-hero-section h2,
+html[data-bs-theme="dark"] .dark-hero-section h3,
+html[data-bs-theme="dark"] .dark-hero-section h4,
+html[data-bs-theme="dark"] .dark-hero-section h5,
+html[data-bs-theme="dark"] .dark-hero-section h6,
+html[data-bs-theme="dark"] .dark-hero-section p,
+html[data-bs-theme="dark"] .hero-section h1,
+html[data-bs-theme="dark"] .hero-section h2,
+html[data-bs-theme="dark"] .hero-section h3,
+html[data-bs-theme="dark"] .hero-section p {
+  color: #ffffff !important;
+}
+
 
 /* span بدون class لوني محدد */
 html[data-bs-theme="dark"] span:not([class*="text-"]):not(.badge):not([class*="bg-"]) {
@@ -860,6 +998,57 @@ html[data-bs-theme="dark"] .bg-light {
   background-color: rgba(255, 255, 255, 0.05) !important;
   color: var(--text) !important;
 }
+
+/* ===== Footer – dark mode overrides ===== */
+/* أيقونات السوشيال ميديا دائماً بيضاء */
+html[data-bs-theme="dark"] .footer-icon-link,
+html[data-bs-theme="dark"] .footer-icon-link:hover {
+  color: #ffffff !important;
+}
+html[data-bs-theme="dark"] .footer-icon-link svg,
+html[data-bs-theme="dark"] .footer-icon-link i,
+html[data-bs-theme="dark"] .footer-icon-link:hover svg,
+html[data-bs-theme="dark"] .footer-icon-link:hover i {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+}
+
+/* زر البوابة دائماً نصه أبيض */
+html[data-bs-theme="dark"] .footer-portal-btn,
+html[data-bs-theme="dark"] .footer-portal-btn:hover,
+html[data-bs-theme="dark"] .footer-portal-btn * {
+  color: #ffffff !important;
+}
+
+/* روابط الفوتر لا تتأثر بقواعد الداكن العامة */
+html[data-bs-theme="dark"] .footer-link,
+html[data-bs-theme="dark"] .footer-custom span,
+html[data-bs-theme="dark"] .footer-custom p {
+  color: rgba(255,255,255,0.7) !important;
+}
+html[data-bs-theme="dark"] .footer-link:hover {
+  color: #26C6DA !important;
+}
+
+
+/* زر النص أبيض في الوضع الداكن – تحسين للتداخل مع الروابط */
+html[data-bs-theme="dark"] a.btn-primary-custom,
+html[data-bs-theme="dark"] a.btn-primary-custom:hover,
+html[data-bs-theme="dark"] a.btn-outline-brand,
+html[data-bs-theme="dark"] a.btn-outline-brand:hover {
+  color: #fff !important;
+}
+
+/* أيقونات بيضاء في الوضع الداكن داخل الأزرار */
+html[data-bs-theme="dark"] .btn-primary-custom svg,
+html[data-bs-theme="dark"] .btn-primary-custom i,
+html[data-bs-theme="dark"] .btn-outline-brand svg,
+html[data-bs-theme="dark"] .btn-outline-brand i {
+  color: #fff !important;
+  fill: #fff !important;
+}
+
+
 
 /* react-data-table */
 html[data-bs-theme="dark"] .rdt_Table,
@@ -978,7 +1167,7 @@ html[data-bs-theme="dark"] .badge.text-bg-light {
 }
 
 /* روابط */
-html[data-bs-theme="dark"] a:not(.btn):not(.navbar-brand) {
+html[data-bs-theme="dark"] a:not([class*="btn"]):not(.navbar-brand) {
   color: var(--accent) !important;
 }
 
@@ -1006,3 +1195,217 @@ html[data-bs-theme="dark"] .auth-card {
   border-color: var(--border) !important;
   box-shadow: 0 30px 80px rgba(0,0,0,0.6) !important;
 }
+
+/* ================================================================
+   PAGE HERO / DARK SECTION HEADERS — WHITE TEXT IN ALL MODES
+   يضمن أن العناوين داخل الهيدر الأزرق الداكن تكون دائماً بيضاء
+   ================================================================ */
+
+/* --- الهيدر الأزرق الداكن في الصفحات الديناميكية --- */
+.dynamic-page-header h1,
+.dynamic-page-header h2,
+.dynamic-page-header h3,
+.dynamic-page-header h4,
+.dynamic-page-header h5,
+.dynamic-page-header h6,
+.dynamic-page-header p,
+.dynamic-page-header span,
+.dynamic-page-header a,
+.dynamic-page-header .breadcrumb-item,
+.dynamic-page-header .breadcrumb-item a {
+  color: #ffffff !important;
+}
+
+/* --- hero-section (الصفحة الرئيسية وغيرها) --- */
+.hero-section h1,
+.hero-section h2,
+.hero-section h3,
+.hero-section h4,
+.hero-section p,
+.hero-section span:not(.badge):not([class*="bg-"]) {
+  color: #ffffff !important;
+}
+
+/* --- أي section يحمل خلفية زرقاء داكنة (يتم تطبيقه عبر class خاص) --- */
+.dark-hero-section h1,
+.dark-hero-section h2,
+.dark-hero-section h3,
+.dark-hero-section h4,
+.dark-hero-section h5,
+.dark-hero-section p,
+.dark-hero-section span:not(.badge) {
+  color: #ffffff !important;
+}
+
+/* overrides للداكن موود — الهيدر الأزرق يبقى أبيض دائماً */
+html[data-bs-theme="dark"] .dynamic-page-header h1,
+html[data-bs-theme="dark"] .dynamic-page-header h2,
+html[data-bs-theme="dark"] .dynamic-page-header h3,
+html[data-bs-theme="dark"] .dynamic-page-header p,
+html[data-bs-theme="dark"] .dynamic-page-header span,
+html[data-bs-theme="dark"] .hero-section h1,
+html[data-bs-theme="dark"] .hero-section h2,
+html[data-bs-theme="dark"] .hero-section p,
+html[data-bs-theme="dark"] .dark-hero-section h1,
+html[data-bs-theme="dark"] .dark-hero-section h2,
+html[data-bs-theme="dark"] .dark-hero-section p {
+  color: #ffffff !important;
+}
+
+/* ================================================================
+   LEAFLET MAP POPUP CUSTOM STYLING (Light / Dark Mode Support)
+   ================================================================ */
+
+.leaflet-popup-content-wrapper {
+  background: var(--card-bg) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 14px !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+.leaflet-popup-tip {
+  background: var(--card-bg) !important;
+  border: 1px solid var(--border) !important;
+}
+
+.leaflet-popup-content {
+  margin: 14px 18px !important;
+  line-height: 1.6 !important;
+  font-family: 'Cairo', 'Tajawal', sans-serif !important;
+}
+
+/* Ensure all nested text/elements inside Leaflet popups have readable coloring, overriding inline styles */
+.leaflet-popup-content,
+.leaflet-popup-content * {
+  color: var(--text) !important;
+}
+
+/* For links inside leaflet popup */
+.leaflet-popup-content a {
+  color: var(--accent) !important;
+  text-decoration: underline !important;
+}
+
+/* Override hardcoded backgrounds in KML/GIS table outputs */
+.leaflet-popup-content table,
+.leaflet-popup-content tbody,
+.leaflet-popup-content tr,
+.leaflet-popup-content td,
+.leaflet-popup-content th {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Styling for data tables inside popups (e.g. KML attributes table) */
+.leaflet-popup-content table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  margin-top: 8px !important;
+}
+
+.leaflet-popup-content th,
+.leaflet-popup-content td {
+  padding: 6px 8px !important;
+  border: 1px solid var(--border) !important;
+  font-size: 0.8rem !important;
+}
+
+/* Header style override */
+.leaflet-popup-content th {
+  background: rgba(0, 0, 0, 0.05) !important;
+  font-weight: 700 !important;
+}
+
+html[data-bs-theme="dark"] .leaflet-popup-content th {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Popup close button */
+.leaflet-popup-close-button {
+  color: var(--text-muted) !important;
+  padding: 8px 8px 0 0 !important;
+}
+
+.leaflet-popup-close-button:hover {
+  color: var(--primary) !important;
+}
+
+/* ── Premium Dropdown Item Hover ─────────────────────────────── */
+.dropdown-item-premium:hover {
+  background: rgba(0, 48, 135, 0.05);
+  transform: translateX(-2px);
+}
+html[data-bs-theme="dark"] .dropdown-item-premium:hover {
+  background: rgba(0, 120, 255, 0.09);
+  transform: translateX(-2px);
+}
+.dropdown-item-premium:hover .dropdown-icon-box {
+  background: linear-gradient(135deg, #003087, #0077e6) !important;
+  color: #fff !important;
+}
+
+/* ── Skeleton Loading Animations ─────────────────────────────── */
+.skeleton-pulse {
+  background: linear-gradient(90deg, 
+    var(--card-bg) 25%, 
+    var(--bg) 50%, 
+    var(--card-bg) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading-shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+@keyframes skeleton-loading-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* ── Global Mobile Responsive & All Screen Sizes Optimizations ── */
+@media (max-width: 991px) {
+  .protected-modal-dialog {
+    max-width: 96vw !important;
+    width: 96vw !important;
+    margin: 10px auto !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .modal-dialog {
+    margin: 8px auto !important;
+    max-width: calc(100vw - 16px) !important;
+    width: calc(100vw - 16px) !important;
+  }
+  .protected-modal-dialog {
+    max-width: 98vw !important;
+    width: 98vw !important;
+  }
+  .modal-body {
+    padding: 16px 12px !important;
+  }
+  .table-responsive, .data-table-wrapper {
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .container, .container-fluid {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+  h1 { font-size: clamp(1.4rem, 6vw, 2.2rem) !important; }
+  h2 { font-size: clamp(1.2rem, 5vw, 1.8rem) !important; }
+  h3 { font-size: clamp(1.1rem, 4.5vw, 1.4rem) !important; }
+}
+
+@media (max-width: 576px) {
+  .btn {
+    padding: 6px 12px !important;
+    font-size: 0.8rem !important;
+  }
+}
+

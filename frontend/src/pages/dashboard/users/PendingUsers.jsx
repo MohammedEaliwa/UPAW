@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Card, Table, Button, Badge } from 'react-bootstrap';
 import { FaCheck, FaTimes, FaUserClock } from 'react-icons/fa';
 import { motion } from 'motion/react';

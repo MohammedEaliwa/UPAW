@@ -123,25 +123,244 @@
   50% { opacity: 0.3; }
 }
 
-/* Sections Responsive Styles */
+/* ─── Auto-Carousel for consecutive images in wp-page-content ─── */
+
+.wp-carousel {
+  position: relative;
+  width: 100%;
+  max-width: 760px;
+  margin: 24px auto;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 48, 135, 0.18);
+  background: #000;
+  user-select: none;
+}
+
+.wp-carousel-viewport {
+  position: relative;
+  width: 100%;
+  height: 480px;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.wp-carousel-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+  transition: opacity 0.25s ease-in-out;
+  background: #000;
+}
+
+/* Arrow buttons: far left & far right, vertically centered */
+.wp-carousel-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  font-weight: bold;
+  cursor: default;
+  z-index: 25;
+  transition: background 0.2s, transform 0.2s, border-color 0.2s;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+  line-height: 1;
+}
+
+.wp-carousel-btn:hover {
+  background: rgba(0, 48, 135, 0.85);
+  border-color: rgba(255, 255, 255, 0.8);
+  transform: translateY(-50%) scale(1.08);
+}
+
+.wp-carousel-btn-left {
+  left: 20px;
+}
+
+.wp-carousel-btn-right {
+  right: 20px;
+}
+
+/* Click zones overlay */
+.wp-carousel-click-zones {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  z-index: 15;
+}
+
+.wp-carousel-zone-left {
+  width: 35%;
+  height: 100%;
+  cursor: default;
+  background: transparent;
+}
+
+.wp-carousel-zone-middle {
+  width: 30%;
+  height: 100%;
+  cursor: default;
+  background: transparent;
+}
+
+.wp-carousel-zone-right {
+  width: 35%;
+  height: 100%;
+  cursor: default;
+  background: transparent;
+}
+
+/* Completely hide spinner */
+.wp-carousel-spinner,
+.wp-carousel-loading .wp-carousel-spinner {
+  display: none !important;
+}
+
+/* Counter badge */
+.wp-carousel-counter {
+  position: absolute;
+  bottom: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 4px 14px;
+  border-radius: 99px;
+  backdrop-filter: blur(4px);
+  z-index: 20;
+  pointer-events: none;
+  font-family: 'Cairo', sans-serif;
+  direction: ltr;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* Dot indicators */
+.wp-carousel-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 0 6px;
+}
+
+.wp-carousel-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border, #ccc);
+  transition: background 0.2s, transform 0.2s;
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+
+.wp-carousel-dot.active {
+  background: var(--primary, #003087);
+  transform: scale(1.3);
+}
+
+/* Section label above carousel */
+.wp-carousel-label {
+  font-family: 'Cairo', 'Tajawal', sans-serif;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--primary, #003087);
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+/* Lightbox Modal */
+.wp-lightbox {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.94);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease-in-out;
+  backdrop-filter: blur(6px);
+}
+
+.wp-lightbox.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.wp-lightbox-img {
+  max-width: 90%;
+  max-height: 88%;
+  object-fit: contain;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.85);
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+}
+
+.wp-lightbox-close {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  font-size: 2.2rem;
+  font-weight: 300;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, transform 0.2s;
+  z-index: 100000;
+  line-height: 1;
+}
+
+.wp-lightbox-close:hover {
+  background: rgba(231, 76, 60, 0.9);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: scale(1.1);
+}
+
 @media (max-width: 768px) {
-  .dynamic-page-wrapper .row {
-    display: flex;
-    flex-direction: column;
+  .wp-carousel-viewport {
+    height: 320px;
   }
-  
-  .dynamic-page-wrapper .col-md-6,
-  .dynamic-page-wrapper .col-lg-6 {
-    width: 100% !important;
-    text-align: center !important;
+  .wp-carousel-btn {
+    width: 38px;
+    height: 38px;
+    font-size: 1.3rem;
   }
-  
-  /* Text over image ordering if desired */
-  .dynamic-page-wrapper .d-flex {
-    flex-direction: column !important;
-  }
-  
-  .wp-page-content {
-    padding: 24px 20px !important;
+  .wp-carousel-btn-left { left: 10px; }
+  .wp-carousel-btn-right { right: 10px; }
+}
+
+@media (max-width: 480px) {
+  .wp-carousel-viewport {
+    height: 240px;
   }
 }
+

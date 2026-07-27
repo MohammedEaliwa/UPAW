@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Container, Row, Col, Badge, Form } from 'react-bootstrap';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -263,9 +263,21 @@ const News = () => {
 
         {/* Content list */}
         {loading ? (
-          <div className="text-center py-5">
-            <div style={{ width: 44, height: 44, border: '3px solid rgba(0,48,135,0.1)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto' }} />
-          </div>
+          <Row className="g-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Col md={6} lg={4} key={i}>
+                <div className="card-custom p-0 overflow-hidden" style={{ borderRadius: 16 }}>
+                  <div className="skeleton-pulse" style={{ height: 200 }} />
+                  <div className="p-4">
+                    <div className="skeleton-pulse mb-2" style={{ height: 24, width: '80%' }} />
+                    <div className="skeleton-pulse mb-2" style={{ height: 16, width: '60%' }} />
+                    <div className="skeleton-pulse mb-3" style={{ height: 16, width: '40%' }} />
+                    <div className="skeleton-pulse" style={{ height: 36, borderRadius: 10 }} />
+                  </div>
+                </div>
+              </Col>
+            ))}
+          </Row>
         ) : filtered.length === 0 ? (
           <div className="text-center py-5 text-muted">{isRtl ? 'لا توجد نتائج تطابق بحثك.' : 'No results matching your search.'}</div>
         ) : (

@@ -1,17 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { Container, Modal, Button } from 'react-bootstrap';
+import { useState, useEffect, useMemo } from 'react';
+import { Container, Modal, Button, Badge } from 'react-bootstrap';
 import { motion } from 'motion/react';
 import {
-  FaGavel, FaDownload,
-  FaBalanceScale, FaFileContract, FaBook, FaClipboardList,
+  FaGavel, FaBalanceScale, FaEye, FaUser, FaFilePdf, FaLock, FaShieldAlt
 } from 'react-icons/fa';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useTheme } from '../../../context/ThemeContext';
+import { useAuth } from '../../../context/AuthContext';
 import { api } from '../../../services/api';
 import DataTable from '../../../components/DataTable';
 import './decisions.css';
-
-// Data will be loaded from API
 
 const CAT_COLORS = {
   'لوائح':    { bg: '#003087', light: '#003087' },
@@ -20,23 +18,96 @@ const CAT_COLORS = {
   'تشريعات':  { bg: '#006fa8', light: '#006fa8' },
 };
 
-const CATEGORIES = ['الكل', 'لوائح', 'قوانين', 'قرارات', 'تشريعات'];
+const CATEGORIES = ['تشريعات', 'قرارات', 'قوانين', 'لوائح', 'الكل'];
 
 // ── Component ────────────────────────────────────────────────────
 const DecisionsPage = () => {
   const { locale } = useLanguage();
   const { isDarkMode } = useTheme();
+  const { user } = useAuth() || {};
   const isRtl = locale === 'ar';
 
+  // Admin role check: Only admin sees author information
+  const isAdmin = Boolean(
+    user && (
+      user.role_slug === 'admin' ||
+      user.role_name === 'أدمن' ||
+      user.role_name === 'مسؤول النظام' ||
+      user.username === 'admin'
+    )
+  );
+
   const [allDecisions, setAllDecisions]    = useState([]);
-  const [displayed, setDisplayed] = useState([]);
   const [search, setSearch]       = useState('');
   const [selectedCat, setSelectedCat] = useState('الكل');
   const [page, setPage]           = useState(1);
   const [limit, setLimit]         = useState(10);
   const [selectedItem, setSelectedItem] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+
+  // Anti-screenshot & window blur protection state
+  const [isProtectedBlank, setIsProtectedBlank] = useState(false);
+
+  // Instant Anti-Screenshot & OS Capture protection listeners
+  useEffect(() => {
+    if (!selectedItem) return;
+
+    const handleBlur = () => {
+      // Immediately hide iframe when focus is lost (e.g. Snipping tool, Win+Shift+S, Alt+Tab, PrtScn)
+      setIsProtectedBlank(true);
+    };
+
+    const handleFocus = () => {
+      setIsProtectedBlank(false);
+    };
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        setIsProtectedBlank(true);
+      } else {
+        setIsProtectedBlank(false);
+      }
+    };
+
+    const handleKeyDown = (e) => {
+      // Intercept PrtScn, Win key, Alt+PrtScn, Ctrl+P, Ctrl+S, F12, Snipping tool shortcuts
+      if (
+        e.key === 'PrintScreen' ||
+        e.keyCode === 44 ||
+        e.key === 'Meta' ||
+        (e.altKey && (e.key === 'PrintScreen' || e.keyCode === 44)) ||
+        (e.ctrlKey && ['p', 'P', 's', 'S', 'u', 'U'].includes(e.key)) ||
+        (e.ctrlKey && e.shiftKey && ['I', 'i', 'C', 'c', 'S', 's'].includes(e.key)) ||
+        e.key === 'F12'
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsProtectedBlank(true);
+        setTimeout(() => setIsProtectedBlank(false), 3000);
+      }
+    };
+
+    const handleKeyUp = (e) => {
+      if (e.key === 'PrintScreen' || e.keyCode === 44) {
+        setIsProtectedBlank(true);
+        setTimeout(() => setIsProtectedBlank(false), 3000);
+      }
+    };
+
+    window.addEventListener('blur', handleBlur);
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('keydown', handleKeyDown, true);
+    window.addEventListener('keyup', handleKeyUp, true);
+
+    return () => {
+      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('keydown', handleKeyDown, true);
+      window.removeEventListener('keyup', handleKeyUp, true);
+    };
+  }, [selectedItem]);
 
   // Fetch decisions from API on mount
   useEffect(() => {
@@ -49,7 +120,6 @@ const DecisionsPage = () => {
         if (mounted) setAllDecisions(data);
       } catch (err) {
         console.error('Failed to load decisions', err);
-        if (mounted) setError(err.message || 'Failed to load');
       } finally {
         if (mounted) setLoading(false);
       }
@@ -58,8 +128,8 @@ const DecisionsPage = () => {
     return () => { mounted = false; };
   }, []);
 
-  // Filter logic
-  useEffect(() => {
+  // Derived filter logic with useMemo
+  const displayed = useMemo(() => {
     let result = [...allDecisions];
     if (selectedCat !== 'الكل') {
       result = result.filter(d => d.category === selectedCat);
@@ -67,28 +137,37 @@ const DecisionsPage = () => {
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(d =>
-        d.title_ar.toLowerCase().includes(q) ||
+        (d.title_ar || '').toLowerCase().includes(q) ||
         (d.title_en || '').toLowerCase().includes(q) ||
-        d.category.toLowerCase().includes(q)
+        (d.category || '').toLowerCase().includes(q) ||
+        (isAdmin && (d.author || '').toLowerCase().includes(q))
       );
     }
-    setDisplayed(result);
-    setPage(1);
-  }, [search, selectedCat, allDecisions]);
+    return result;
+  }, [search, selectedCat, allDecisions, isAdmin]);
 
-  const totalPages = Math.ceil(displayed.length / limit) || 1;
-  const pageData   = displayed.slice((page - 1) * limit, page * limit);
+  const totalPages = Math.max(1, Math.ceil(displayed.length / limit));
+  const safePage   = Math.min(page, totalPages);
+  const pageData   = displayed.slice((safePage - 1) * limit, safePage * limit);
 
   // Export CSV
   const handleExport = () => {
+    const header = ['#', isRtl ? 'العنوان' : 'Title', isRtl ? 'التصنيف' : 'Category'];
+    if (isAdmin) header.push(isRtl ? 'المُدخل' : 'Author');
+
     const csvContent = [
-      ['#', isRtl ? 'العنوان' : 'Title', isRtl ? 'التصنيف' : 'Category'].join(','),
-      ...displayed.map((d, i) => [
-        i + 1,
-        `"${(isRtl ? d.title_ar : (d.title_en || d.title_ar)).replace(/"/g, '""')}"`,
-        d.category,
-      ].join(',')),
+      header.join(','),
+      ...displayed.map((d, i) => {
+        const row = [
+          i + 1,
+          `"${(isRtl ? d.title_ar : (d.title_en || d.title_ar)).replace(/"/g, '""')}"`,
+          d.category,
+        ];
+        if (isAdmin) row.push(d.author || 'Aya');
+        return row.join(',');
+      }),
     ].join('\n');
+
     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -118,18 +197,19 @@ const DecisionsPage = () => {
     },
     {
       key: 'title_ar',
-      label: isRtl ? 'عنوان الوثيقة' : 'Document Title',
+      label: isRtl ? 'عنوان القرار / الوثيقة' : 'Decision / Document Title',
       sortable: true,
       render: (_, row) => (
         <div
           style={{ cursor: 'pointer' }}
-          onClick={() => setSelectedItem(row)}
+          onClick={() => { setSelectedItem(row); setIsProtectedBlank(false); }}
         >
-          <div style={{ fontWeight: 700, fontSize: '0.93rem', color: 'var(--text)', marginBottom: 3, lineHeight: 1.4 }}>
+          <div style={{ fontWeight: 800, fontSize: '0.94rem', color: 'var(--primary)', marginBottom: 3, lineHeight: 1.4 }} className="hover-underline">
+            <FaFilePdf className="ms-1 me-1 text-danger" />
             {isRtl ? row.title_ar : (row.title_en || row.title_ar)}
           </div>
-          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-            {isRtl ? row.desc_ar : (row.desc_en || row.desc_ar)}
+          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+            رقم القرار: {row.number || row.id} {row.year ? `(${row.year})` : ''}
           </div>
         </div>
       ),
@@ -138,7 +218,7 @@ const DecisionsPage = () => {
       key: 'category',
       label: isRtl ? 'التصنيف' : 'Category',
       sortable: true,
-      style: { width: 130, textAlign: 'center' },
+      style: { width: 120, textAlign: 'center' },
       render: (val) => {
         const color = CAT_COLORS[val]?.bg || '#003087';
         return (
@@ -152,43 +232,52 @@ const DecisionsPage = () => {
             fontSize: '0.78rem',
             whiteSpace: 'nowrap',
           }}>
-            {val}
+            {val || 'قرارات'}
           </span>
         );
       },
     },
+    // Show Author Column ONLY for ADMIN
+    ...(isAdmin ? [{
+      key: 'author',
+      label: isRtl ? 'المُدخل بواسطة' : 'Added By',
+      sortable: true,
+      style: { width: 140, textAlign: 'center' },
+      render: (val, row) => (
+        <div className="d-flex flex-column align-items-center">
+          <Badge bg="info" className="px-2 py-1 text-dark fw-bold d-flex align-items-center gap-1" style={{ fontSize: '0.78rem' }}>
+            <FaUser size={10} /> {val || row.author || 'Aya'}
+          </Badge>
+          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+            {row.author_role || 'مدخل بيانات'}
+          </span>
+        </div>
+      ),
+    }] : []),
     {
       key: 'file_url',
-      label: isRtl ? 'تحميل' : 'Download',
+      label: isRtl ? 'الإجراءات' : 'Actions',
       sortable: false,
       style: { width: 110, textAlign: 'center' },
-      render: (val) =>
-        val && val !== '#' ? (
-          <a href={val} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
-            <button style={{
-              background: 'linear-gradient(135deg,#003087,#0066cc)',
+      render: (_, row) => (
+        <div className="d-flex justify-content-center">
+          <button
+            onClick={() => { setSelectedItem(row); setIsProtectedBlank(false); }}
+            style={{
+              background: 'linear-gradient(135deg, #003087 0%, #0066cc 100%)',
               border: 'none', color: '#fff',
-              padding: '7px 16px', borderRadius: 10,
-              fontWeight: 700, cursor: 'pointer', fontSize: '0.78rem',
-              fontFamily: 'inherit',
+              padding: '7px 18px', borderRadius: 8,
+              fontWeight: 700, cursor: 'pointer', fontSize: '0.82rem',
               display: 'inline-flex', alignItems: 'center', gap: 6,
-            }}>
-              <FaDownload size={11} />
-              {isRtl ? 'تحميل' : 'Download'}
-            </button>
-          </a>
-        ) : (
-          <button disabled style={{
-            background: 'var(--border)', border: 'none', color: 'var(--text-muted)',
-            padding: '7px 16px', borderRadius: 10,
-            fontWeight: 700, cursor: 'not-allowed', fontSize: '0.78rem',
-            fontFamily: 'inherit', opacity: 0.5,
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-          }}>
-            <FaDownload size={11} />
-            {isRtl ? 'غير متاح' : 'N/A'}
+              boxShadow: '0 2px 8px rgba(0,48,135,0.2)'
+            }}
+            title="عرض القرار"
+          >
+            <FaEye size={13} />
+            {isRtl ? 'عرض القرار' : 'View Decision'}
           </button>
-        ),
+        </div>
+      ),
     },
   ];
 
@@ -220,10 +309,22 @@ const DecisionsPage = () => {
       background: 'var(--bg)', minHeight: '100vh',
       direction: isRtl ? 'rtl' : 'ltr',
       fontFamily: 'Cairo, Tajawal, sans-serif',
+      userSelect: 'none',
+      WebkitUserSelect: 'none',
     }}>
 
+      <style>{`
+        @media print {
+          body { display: none !important; }
+        }
+        .protected-modal-dialog {
+          max-width: 94vw !important;
+          width: 94vw !important;
+        }
+      `}</style>
+
       {/* Hero Header */}
-      <section style={{
+      <section className="dark-hero-section" style={{
         background: 'linear-gradient(135deg, #001225 0%, #001d5a 50%, #003087 100%)',
         padding: '70px 0 50px',
         position: 'relative',
@@ -265,13 +366,13 @@ const DecisionsPage = () => {
             columns={columns}
             data={pageData}
             total={displayed.length}
-            page={page}
+            page={safePage}
             limit={limit}
             totalPages={totalPages}
             loading={loading}
             onPageChange={p => setPage(p)}
             onLimitChange={l => { setLimit(l); setPage(1); }}
-            onSearch={q => setSearch(q)}
+            onSearch={q => { setSearch(q); setPage(1); }}
             searchPlaceholder={isRtl ? 'ابحث في القرارات واللوائح...' : 'Search decisions and regulations...'}
             filters={categoryFilter}
             onExport={handleExport}
@@ -281,11 +382,12 @@ const DecisionsPage = () => {
         </motion.div>
       </Container>
 
-      {/* Details Modal */}
+      {/* Details & PDF Viewing Modal */}
       <Modal
         show={selectedItem !== null}
-        onHide={() => setSelectedItem(null)}
-        size="lg"
+        onHide={() => { setSelectedItem(null); setIsProtectedBlank(false); }}
+        size="xl"
+        dialogClassName="protected-modal-dialog"
         centered
         style={{ fontFamily: 'Cairo, Tajawal, sans-serif' }}
       >
@@ -296,65 +398,106 @@ const DecisionsPage = () => {
         }}>
           <Modal.Title style={{
             color: CAT_COLORS[selectedItem?.category]?.bg || '#003087',
-            fontWeight: 800, fontSize: '1rem',
+            fontWeight: 800, fontSize: '1.1rem',
+            display: 'flex', alignItems: 'center', gap: 8
           }}>
-            {isRtl ? 'تفاصيل الوثيقة' : 'Document Details'}
+            <FaFilePdf className="text-danger" />
+            {isRtl ? 'عرض القرار الرسمي' : 'View Official Decision'}
           </Modal.Title>
         </Modal.Header>
-        <Modal.Body style={{
-          padding: '28px 32px',
-          direction: isRtl ? 'rtl' : 'ltr',
-          textAlign: isRtl ? 'right' : 'left',
-          background: isDarkMode ? 'var(--card-bg)' : '#fff',
-          color: 'var(--text)',
-        }}>
+        <Modal.Body
+          onContextMenu={(e) => e.preventDefault()}
+          onCopy={(e) => e.preventDefault()}
+          style={{
+            padding: '24px 28px',
+            direction: isRtl ? 'rtl' : 'ltr',
+            textAlign: isRtl ? 'right' : 'left',
+            background: isDarkMode ? 'var(--card-bg)' : '#fff',
+            color: 'var(--text)',
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+          }}
+        >
           {selectedItem && (
             <div>
-              <span style={{
-                background: CAT_COLORS[selectedItem.category]?.bg || '#003087',
-                color: '#fff', fontSize: '0.82rem', fontWeight: 700,
-                padding: '4px 16px', borderRadius: 99, display: 'inline-block', marginBottom: 16,
-              }}>
-                {selectedItem.category}
-              </span>
+              <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                <div className="d-flex align-items-center gap-2">
+                  <span style={{
+                    background: CAT_COLORS[selectedItem.category]?.bg || '#003087',
+                    color: '#fff', fontSize: '0.82rem', fontWeight: 700,
+                    padding: '4px 16px', borderRadius: 99, display: 'inline-block',
+                  }}>
+                    {selectedItem.category || 'قرارات'}
+                  </span>
+                  <Badge bg="dark" className="px-3 py-2 text-warning fs-6 rounded-pill d-flex align-items-center gap-2">
+                    <FaShieldAlt /> وثيقة محمية ضد التصوير والنسخ
+                  </Badge>
+                </div>
 
-              <h4 style={{ fontWeight: 800, lineHeight: 1.6, marginBottom: 16, color: 'var(--text)' }}>
+                {/* Show Author Badge ONLY for ADMIN */}
+                {isAdmin && (
+                  <Badge bg="info" className="px-3 py-2 text-dark fs-6 rounded-pill d-flex align-items-center gap-2">
+                    <FaUser /> المُدخل بواسطة: <strong>{selectedItem.author || 'Aya'}</strong> ({selectedItem.author_role || 'مدخل بيانات'})
+                  </Badge>
+                )}
+              </div>
+
+              <h4 style={{ fontWeight: 900, lineHeight: 1.5, marginBottom: 12, color: 'var(--text)' }}>
                 {isRtl ? selectedItem.title_ar : (selectedItem.title_en || selectedItem.title_ar)}
               </h4>
 
-              <hr style={{ opacity: 0.15, marginBottom: 16 }} />
+              <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: 16 }}>
+                <strong>رقم الوثيقة/القرار:</strong> {selectedItem.number || selectedItem.id} {selectedItem.year ? `| السنة: ${selectedItem.year}` : ''}
+              </div>
 
-              <h6 style={{ fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8 }}>
-                {isRtl ? 'نبذة عن الوثيقة:' : 'About this document:'}
-              </h6>
-              <p style={{ color: 'var(--text-muted)', fontSize: '1rem', lineHeight: 1.85 }}>
-                {isRtl ? (selectedItem.desc_ar || 'لا يوجد وصف متاح.') : (selectedItem.desc_en || selectedItem.desc_ar || 'No description available.')}
-              </p>
+              {/* PDF Container with anti-screenshot overlay */}
+              {selectedItem.file_url && selectedItem.file_url !== '#' ? (
+                <div className="mb-3 position-relative" style={{ overflow: 'hidden', borderRadius: 14 }}>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 24, flexWrap: 'wrap' }}>
-                <Button variant="light" onClick={() => setSelectedItem(null)} style={{ fontFamily: 'inherit', fontWeight: 700 }}>
+                  {isProtectedBlank ? (
+                    <div style={{
+                      width: '100%',
+                      height: '650px',
+                      background: '#020617',
+                      color: '#ef4444',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: 14,
+                      gap: 14,
+                      border: '2px solid #ef4444'
+                    }}>
+                      <FaLock size={56} />
+                      <h3 style={{ fontWeight: 900, margin: 0, color: '#ffffff' }}>محتوى محمي - حجب أمني تلقائي</h3>
+                      <p style={{ color: '#94a3b8', fontSize: '0.95rem', margin: 0 }}>تم حجب محتوى القرار فوراً لحماية السرية أثناء محاولة تصوير الشاشة</p>
+                    </div>
+                  ) : (
+                    /* Standard Web PDF Viewer Engine */
+                    <iframe
+                      src={`${selectedItem.file_url}#page=1&view=FitH`}
+                      style={{
+                        width: '100%',
+                        height: '650px',
+                        borderRadius: 14,
+                        border: '1.5px solid var(--border)',
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                        background: '#f8fafc'
+                      }}
+                      title="معاينة القرار PDF"
+                    />
+                  )}
+                </div>
+              ) : (
+                <p style={{ color: 'var(--text-muted)', fontSize: '1rem', lineHeight: 1.85 }}>
+                  {isRtl ? (selectedItem.desc_ar || 'لا يوجد ملف مرفق متاح.') : (selectedItem.desc_en || selectedItem.desc_ar || 'No file available.')}
+                </p>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+                <Button variant="secondary" onClick={() => { setSelectedItem(null); setIsProtectedBlank(false); }} style={{ fontFamily: 'inherit', fontWeight: 700, borderRadius: 10, padding: '8px 24px' }}>
                   {isRtl ? 'إغلاق' : 'Close'}
                 </Button>
-                {selectedItem.file_url && selectedItem.file_url !== '#' && (
-                  <a
-                    href={selectedItem.file_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ textDecoration: 'none' }}
-                  >
-                    <button style={{
-                      background: `linear-gradient(135deg, ${CAT_COLORS[selectedItem.category]?.bg || '#003087'} 0%, #0066cc 100%)`,
-                      border: 'none', color: '#fff',
-                      padding: '10px 24px', borderRadius: 12,
-                      fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem',
-                      fontFamily: 'inherit',
-                      display: 'inline-flex', alignItems: 'center', gap: 8,
-                    }}>
-                      <FaDownload size={14} />
-                      {isRtl ? 'تحميل الملف' : 'Download File'}
-                    </button>
-                  </a>
-                )}
               </div>
             </div>
           )}

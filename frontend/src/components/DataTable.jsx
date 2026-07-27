@@ -102,10 +102,9 @@ const DataTable = ({
     return [page - 2, page - 1, page, page + 1, page + 2];
   };
 
-  // Return page numbers array, reversed in RTL so visual order matches RTL layouts
+  // Return page numbers array (ascending)
   const getDisplayPageNumbers = () => {
-    const nums = getPageNumbers();
-    return rtl ? nums.slice().reverse() : nums;
+    return getPageNumbers();
   };
 
   return (
@@ -188,15 +187,15 @@ const DataTable = ({
             </AnimatePresence>
           </div>
 
-          {/* Center Controls */}
+          {/* Center Controls: Export on left, Filters on right in RTL */}
           <div className="dt-toolbar-center">
-            {filters}
             {onExport && (
               <button className="dt-export-btn" onClick={onExport} title="تصدير البيانات">
                 <FaFileDownload size={13} />
                 <span>تصدير</span>
               </button>
             )}
+            {filters}
           </div>
 
           {/* Search */}
@@ -297,8 +296,8 @@ const DataTable = ({
           )}
         </div>{/* /scroll */}
 
-        {/* Footer: info + pagination */}
-        <div className="dt-footer">
+        {/* Footer: Pagination on FAR LEFT, Info on FAR RIGHT */}
+        <div className="dt-footer" style={{ display: 'flex', flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
           <div className="dt-footer-info">
             {total > 0
               ? <>عرض <strong>{startRecord}</strong> – <strong>{endRecord}</strong> من أصل <strong>{total}</strong> سجل</>
@@ -307,29 +306,30 @@ const DataTable = ({
 
           {effectiveTotalPages > 1 && (
             <nav className="dt-pagination" aria-label="التنقل بين الصفحات">
-              {/* First */}
+              {/* Last Page (Far Left - Enabled on page 1) */}
               <button
                 className="dt-pg-btn"
-                onClick={() => onPageChange && onPageChange(1)}
-                disabled={page <= 1}
-                title="الصفحة الأولى"
-                aria-label="الصفحة الأولى"
+                onClick={() => onPageChange && onPageChange(effectiveTotalPages)}
+                disabled={page >= effectiveTotalPages}
+                title="الصفحة الأخيرة"
+                aria-label="الصفحة الأخيرة"
               >
-                <FaAngleDoubleRight size={12} />
-              </button>
-              {/* Prev */}
-              <button
-                className="dt-pg-btn"
-                onClick={() => onPageChange && onPageChange(page - 1)}
-                disabled={page <= 1}
-                title="السابقة"
-                aria-label="الصفحة السابقة"
-              >
-                <FaChevronRight size={11} />
+                <FaAngleDoubleLeft size={12} />
               </button>
 
-              {/* Page numbers */}
-              {getDisplayPageNumbers().map(p => (
+              {/* Next Page (Left Arrow: moves to page + 1, ENABLED on page 1) */}
+              <button
+                className="dt-pg-btn"
+                onClick={() => onPageChange && onPageChange(page + 1)}
+                disabled={page >= effectiveTotalPages}
+                title="التالية"
+                aria-label="الصفحة التالية"
+              >
+                <FaChevronLeft size={11} />
+              </button>
+
+              {/* Page numbers reversed: 2 1 */}
+              {getPageNumbers().slice().reverse().map(p => (
                 <button
                   key={p}
                   className={`dt-pg-btn ${p === page ? 'active' : ''}`}
@@ -340,25 +340,26 @@ const DataTable = ({
                 </button>
               ))}
 
-              {/* Next */}
+              {/* Prev Page (Right Arrow: moves to page - 1, DISABLED on page 1) */}
               <button
                 className="dt-pg-btn"
-                onClick={() => onPageChange && onPageChange(page + 1)}
-                disabled={page >= effectiveTotalPages}
-                title="التالية"
-                aria-label="الصفحة التالية"
+                onClick={() => onPageChange && onPageChange(page - 1)}
+                disabled={page <= 1}
+                title="السابقة"
+                aria-label="الصفحة السابقة"
               >
-                <FaChevronLeft size={11} />
+                <FaChevronRight size={11} />
               </button>
-              {/* Last */}
+
+              {/* First Page (Far Right Arrow: DISABLED on page 1) */}
               <button
                 className="dt-pg-btn"
-                onClick={() => onPageChange && onPageChange(effectiveTotalPages)}
-                disabled={page >= effectiveTotalPages}
-                title="الصفحة الأخيرة"
-                aria-label="الصفحة الأخيرة"
+                onClick={() => onPageChange && onPageChange(1)}
+                disabled={page <= 1}
+                title="الصفحة الأولى"
+                aria-label="الصفحة الأولى"
               >
-                <FaAngleDoubleLeft size={12} />
+                <FaAngleDoubleRight size={12} />
               </button>
             </nav>
           )}

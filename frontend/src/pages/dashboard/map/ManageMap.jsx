@@ -53,6 +53,8 @@ const restudyIcon = L.icon({
   popupAnchor: [1, -34],
 });
 
+
+
 // Custom Map click handler to select coordinates
 const MapClickSelector = ({ onSelectCoords }) => {
   useMapEvents({
@@ -111,7 +113,10 @@ const ManageMap = () => {
     details_ar: '',
     details_en: '',
     rejection_comment: '',
+    color: '#003087',
   });
+
+  const [kmlFolderColors, setKmlFolderColors] = useState({});
 
   // Admin rejection reason input modal state
   const [showRejectReasonModal, setShowRejectReasonModal] = useState(false);
@@ -155,8 +160,30 @@ const ManageMap = () => {
       details_en: loc.details_en || '',
       is_approved: loc.is_approved,
       rejection_comment: loc.rejection_comment || '',
+      color: loc.color || '#003087',
     });
     setShowReviewModal(true);
+  };
+
+  const handleSaveMarkerColor = async (id, color) => {
+    try {
+      await api.updateMapLocation(id, { color });
+      setLocations(prev => prev.map(l => l.id === id ? { ...l, color } : l));
+      showResult('تم تغيير لون المعلم بنجاح! 🎨', 'success');
+    } catch (err) {
+      showResult(err.message || 'خطأ في تغيير اللون', 'danger');
+    }
+  };
+
+  const handleSaveKmlFolderColor = async (folder, color) => {
+    try {
+      await api.updateKmlFolderColor(folder, color);
+      setKmlFeatures(prev => prev.map(f => f.folder === folder ? { ...f, color } : f));
+      setKmlFolderColors(prev => ({ ...prev, [folder]: color }));
+      showResult(`تم تغيير لون طبقة "${folder}" بنجاح! 🎨`, 'success');
+    } catch (err) {
+      showResult(err.message || 'خطأ في تغيير اللون', 'danger');
+    }
   };
 
   const handleSelectReviewCoords = (lat, lng) => {
@@ -187,8 +214,9 @@ const ManageMap = () => {
         longitude: parseFloat(reviewForm.longitude),
         details_ar: reviewForm.details_ar,
         details_en: reviewForm.details_en || reviewForm.details_ar,
-        is_approved: 1,
-        rejection_comment: null
+        is_approved: Number(reviewForm.is_approved) === 1 ? 1 : 1,
+        rejection_comment: null,
+        color: reviewForm.color || '#003087',
       });
       showResult(
         reviewForm.is_approved === 1
@@ -360,6 +388,7 @@ const ManageMap = () => {
     latitude: '',
     longitude: '',
     details: '',
+    color: '#003087',
   });
 
   const categories = ['حكومي', 'سكني', 'تجاري', 'خدمات'];
@@ -389,7 +418,8 @@ const ManageMap = () => {
       details_ar: form.details,
       details_en: form.details,
       created_by: loggedInUser.id || 1,
-      is_approved: isPending ? 0 : 1
+      is_approved: isPending ? 0 : 1,
+      color: form.color || '#003087',
     };
 
     api.createMapLocation(newLocation)
@@ -399,7 +429,7 @@ const ManageMap = () => {
           ? 'تم تقديم طلب إضافة المعلم بنجاح وبانتظار مراجعة واعتماد المسؤول! ⏳'
           : 'تمت إضافة الموقع بنجاح ومشاركته على الخريطة! ✨';
         showResult(successMsg, 'success');
-        setForm({ name: '', category: 'حكومي', latitude: '', longitude: '', details: '' });
+        setForm({ name: '', category: 'حكومي', latitude: '', longitude: '', details: '', color: '#003087' });
       })
       .catch(err => {
         showResult(err.message || 'حدث خطأ أثناء الإضافة', 'danger');
@@ -529,7 +559,7 @@ const ManageMap = () => {
                 </Col>
               </Row>
 
-              <Form.Group className="mb-4">
+              <Form.Group className="mb-3">
                 <Form.Label className="fw-bold">تفاصيل المعلم / الوصف</Form.Label>
                 <Form.Control
                   as="textarea"
@@ -538,6 +568,31 @@ const ManageMap = () => {
                   value={form.details}
                   onChange={e => setForm({...form, details: e.target.value})}
                 />
+              </Form.Group>
+
+              <Form.Group className="mb-4">
+                <Form.Label className="fw-bold d-flex align-items-center gap-2">
+                  🎨 لون المعلم على الخريطة
+                </Form.Label>
+                <div className="d-flex align-items-center gap-3">
+                  <input
+                    type="color"
+                    value={form.color}
+                    onChange={e => setForm({...form, color: e.target.value})}
+                    style={{ width: 48, height: 40, border: 'none', borderRadius: 8, cursor: 'pointer', padding: 2 }}
+                    title="اختر لون المعلم"
+                  />
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: form.color, border: '3px solid #dee2e6', boxShadow: '0 2px 6px rgba(0,0,0,0.15)' }} />
+                  <span className="text-muted small">{form.color}</span>
+                  {['#003087','#10b981','#f59e0b','#ef4444','#8b5cf6','#0dcaf0','#fd7e14'].map(c => (
+                    <div
+                      key={c}
+                      onClick={() => setForm({...form, color: c})}
+                      style={{ width: 24, height: 24, borderRadius: '50%', background: c, cursor: 'pointer', border: form.color === c ? '3px solid #000' : '2px solid #dee2e6', transition: 'transform 0.15s' }}
+                      title={c}
+                    />
+                  ))}
+                </div>
               </Form.Group>
 
               <PrimaryButton type="submit" style={{ width: '100%' }} icon={<FaCheckCircle />}>
@@ -589,22 +644,29 @@ const ManageMap = () => {
               )}
             </Form>
 
-            {/* KML Folders Summary */}
+            {/* KML Folders Summary with color pickers */}
             {kmlFolders.length > 0 && (
               <div className="mt-3">
-                <div className="fw-bold small mb-2" style={{ color: 'var(--text-muted)' }}>الطبقات المستوردة:</div>
+                <div className="fw-bold small mb-2" style={{ color: 'var(--text-muted)' }}>الطبقات المستوردة (اضغط على اللون لتغييره):</div>
                 <div className="d-flex flex-wrap gap-2">
-                  {kmlFolders.map((folder, idx) => (
-                    <Badge 
-                      key={folder} 
-                      style={{ 
-                        background: KML_LAYER_COLORS[idx % KML_LAYER_COLORS.length], 
-                        padding: '6px 12px', borderRadius: 99, fontSize: '0.8rem' 
-                      }}
-                    >
-                      {folder} ({kmlFeatures.filter(f => f.folder === folder).length})
-                    </Badge>
-                  ))}
+                  {kmlFolders.map((folder, idx) => {
+                    const folderColor = kmlFolderColors[folder] || KML_LAYER_COLORS[idx % KML_LAYER_COLORS.length];
+                    return (
+                      <div key={folder} className="d-flex align-items-center gap-1" style={{ background: 'rgba(0,0,0,0.04)', borderRadius: 99, padding: '4px 10px 4px 4px', border: '1px solid #dee2e6' }}>
+                        <input
+                          type="color"
+                          value={folderColor}
+                          onChange={e => setKmlFolderColors(prev => ({ ...prev, [folder]: e.target.value }))}
+                          onBlur={e => handleSaveKmlFolderColor(folder, e.target.value)}
+                          style={{ width: 24, height: 24, border: 'none', borderRadius: '50%', cursor: 'pointer', padding: 1 }}
+                          title="غيِّر لون الطبقة"
+                        />
+                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#333' }}>
+                          {folder} ({kmlFeatures.filter(f => f.folder === folder).length})
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -618,7 +680,7 @@ const ManageMap = () => {
               💡 <strong>تنبيه للآدمن/مدخل البيانات:</strong> انقر على الخريطة في أي مكان لتحديد إحداثيات المعلم تلقائياً.
             </div>
             <div style={{ flex: 1, position: 'relative' }}>
-              <MapContainer center={[32.8872, 13.1932]} zoom={6} style={{ height: '100%', width: '100%', borderRadius: '12px' }}>
+              <MapContainer center={[27.0, 17.5]} zoom={5} style={{ height: '100%', width: '100%', borderRadius: '12px' }}>
                 <TileLayer
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -632,36 +694,53 @@ const ManageMap = () => {
                   </Marker>
                 )}
 
-                {/* Locations markers */}
-                {locations.map((loc) => (
-                  <Marker 
-                    key={loc.id} 
-                    position={[loc.latitude, loc.longitude]}
-                    icon={loc.is_approved === 1 ? DefaultIcon : (loc.is_approved === 2 ? restudyIcon : pendingIcon)}
-                  >
-                    <Popup>
-                    <div className="text-center" style={{ fontFamily: 'Cairo', direction: 'rtl', textAlign: 'right' }}>
-                      <Badge 
-                        bg={loc.is_approved === 1 ? "success" : (loc.is_approved === 2 ? "danger" : "warning")} 
-                        text={loc.is_approved === 1 ? "white" : (loc.is_approved === 2 ? "white" : "dark")} 
-                        className="mb-2"
-                      >
-                        {loc.category} {loc.is_approved === 0 && '(قيد المراجعة)'} {loc.is_approved === 2 && '(إعادة دراسة)'}
-                      </Badge>
-                      <h6 className="fw-bold mb-1">{loc.name_ar || loc.name}</h6>
-                      <p className="text-muted small m-0">{loc.details_ar || loc.details}</p>
-                      {loc.is_approved === 2 && loc.rejection_comment && (
-                        <div className="mt-2 p-1.5 rounded text-danger bg-danger-subtle small fw-bold" style={{ fontSize: '0.75rem' }}>
-                          ⚠️ سبب الرفض: {loc.rejection_comment}
+                {/* Locations markers with custom colors */}
+                {locations.map((loc) => {
+                  const markerColor = loc.color || '#003087';
+                  const coloredIcon = Number(loc.is_approved) === 1
+                    ? L.divIcon({
+                        className: '',
+                        html: `<div style="width:25px;height:41px;position:relative">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 25 41" width="25" height="41">
+                            <path d="M12.5 0C5.6 0 0 5.6 0 12.5c0 9.4 12.5 28.5 12.5 28.5S25 21.9 25 12.5C25 5.6 19.4 0 12.5 0z" fill="${markerColor}"/>
+                            <circle cx="12.5" cy="12.5" r="5.5" fill="white" opacity="0.9"/>
+                          </svg>
+                        </div>`,
+                        iconSize: [25, 41],
+                        iconAnchor: [12, 41],
+                        popupAnchor: [1, -34],
+                      })
+                    : (Number(loc.is_approved) === 2 ? restudyIcon : pendingIcon);
+                  return (
+                    <Marker 
+                      key={loc.id} 
+                      position={[loc.latitude, loc.longitude]}
+                      icon={coloredIcon}
+                    >
+                      <Popup>
+                      <div className="text-center" style={{ fontFamily: 'Cairo', direction: 'rtl', textAlign: 'right' }}>
+                        <Badge 
+                          bg={Number(loc.is_approved) === 1 ? "success" : (Number(loc.is_approved) === 2 ? "danger" : "warning")} 
+                          text={Number(loc.is_approved) === 1 ? "white" : (Number(loc.is_approved) === 2 ? "white" : "dark")} 
+                          className="mb-2"
+                        >
+                          {loc.category} {Number(loc.is_approved) === 0 && '(قيد المراجعة)'} {Number(loc.is_approved) === 2 && '(إعادة دراسة)'}
+                        </Badge>
+                        <h6 className="fw-bold mb-1">{loc.name_ar || loc.name}</h6>
+                        <p className="text-muted small m-0">{loc.details_ar || loc.details}</p>
+                        {Number(loc.is_approved) === 2 && loc.rejection_comment && (
+                          <div className="mt-2 p-1.5 rounded text-danger bg-danger-subtle small fw-bold" style={{ fontSize: '0.75rem' }}>
+                            ⚠️ سبب الرفض: {loc.rejection_comment}
+                          </div>
+                        )}
+                        <div className="text-muted small mt-1.5 border-top pt-1">
+                          أنشئ بواسطة: {loc.creator_name || 'مدير النظام'}
                         </div>
-                      )}
-                      <div className="text-muted small mt-1.5 border-top pt-1">
-                        أنشئ بواسطة: {loc.creator_name || 'مدير النظام'}
                       </div>
-                    </div>
-                  </Popup>
-                  </Marker>
-                ))}
+                    </Popup>
+                    </Marker>
+                  );
+                })}
 
                 {/* KML Features layers – dynamic colors */}
                 {kmlFeatures.map((feat) => {
@@ -715,6 +794,7 @@ const ManageMap = () => {
                   <th className="py-3">إحداثيات الموقع</th>
                   <th className="py-3">أنشئ بواسطة</th>
                   <th className="py-3">الحالة</th>
+                  <th className="py-3">اللون</th>
                   <th className="py-3">التفاصيل</th>
                   <th className="py-3">الإجراءات</th>
                 </tr>
@@ -742,34 +822,53 @@ const ManageMap = () => {
                         <div className="small fw-semibold">{loc.creator_name || 'مدير النظام'}</div>
                       </td>
                       <td>
-                        {loc.is_approved === 1 ? (
+                        {Number(loc.is_approved) === 1 ? (
                           <Badge bg="success" className="py-1.5 px-2.5">معتمد</Badge>
-                        ) : loc.is_approved === 2 ? (
+                        ) : Number(loc.is_approved) === 2 ? (
                           <Badge bg="danger" className="py-1.5 px-2.5">إعادة دراسة</Badge>
                         ) : (
                           <Badge bg="warning" text="dark" className="py-1.5 px-2.5">قيد المراجعة</Badge>
                         )}
+                      </td>
+                      {/* Color cell with quick color picker */}
+                      <td>
+                        <div className="d-flex align-items-center justify-content-center gap-2">
+                          <div style={{ width: 22, height: 22, borderRadius: '50%', background: loc.color || '#003087', border: '2px solid #dee2e6', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                          {(loggedInUser.role?.slug === 'admin' || loggedInUser.role?.slug === 'data_entry') && (
+                            <input
+                              type="color"
+                              defaultValue={loc.color || '#003087'}
+                              onChange={e => {
+                                setLocations(prev => prev.map(l => l.id === loc.id ? { ...l, color: e.target.value } : l));
+                              }}
+                              onBlur={e => handleSaveMarkerColor(loc.id, e.target.value)}
+                              style={{ width: 26, height: 26, border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}
+                              title="غيِّر لون المعلم"
+                            />
+                          )}
+                        </div>
                       </td>
                       <td className="text-end text-muted small" style={{ maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {loc.details_ar || loc.details || '-'}
                       </td>
                       <td>
                         <div className="d-flex justify-content-center gap-2">
-                          {loggedInUser.role?.slug === 'admin' ? (
+                          {loggedInUser.role?.slug === 'admin' || loggedInUser.role?.slug === 'data_entry' ? (
                             <>
                               <Button 
-                                variant={loc.is_approved === 1 ? "primary" : "warning"} 
+                                variant={Number(loc.is_approved) === 1 ? "primary" : "warning"} 
                                 size="sm" 
                                 onClick={() => handleOpenReview(loc)}
                                 className="d-flex align-items-center justify-content-center px-2.5 fw-bold"
                               >
-                                {loc.is_approved === 1 ? 'تعديل' : 'مراجعة'}
+                                {Number(loc.is_approved) === 1 ? 'تعديل' : 'مراجعة'}
                               </Button>
                               <Button 
                                 variant="danger" 
                                 size="sm" 
                                 onClick={() => handleDelete(loc.id)} 
                                 className="d-flex align-items-center justify-content-center gap-1"
+                                title="حذف المعلم"
                               >
                                 <FaTrashAlt />
                                 <span>حذف</span>
@@ -777,9 +876,9 @@ const ManageMap = () => {
                             </>
                           ) : (
                             /* Creator or employee can edit/cancel their own points */
-                            (loc.created_by === loggedInUser.id || loggedInUser.role?.slug === 'data_entry') && (
+                            (loc.created_by === loggedInUser.id) && (
                               <>
-                                {loc.is_approved === 2 ? (
+                                {Number(loc.is_approved) === 2 ? (
                                   <Button 
                                     variant="danger" 
                                     size="sm" 
@@ -807,20 +906,11 @@ const ManageMap = () => {
                                     size="sm" 
                                     onClick={() => handleOpenReview(loc)}
                                     className="d-flex align-items-center justify-content-center px-2.5 fw-bold"
-                                    disabled={loc.is_approved === 0}
+                                    disabled={Number(loc.is_approved) === 0}
                                   >
-                                    {loc.is_approved === 0 ? 'قيد المراجعة' : 'تعديل'}
+                                    {Number(loc.is_approved) === 0 ? 'قيد المراجعة' : 'تعديل'}
                                   </Button>
                                 )}
-                                <Button 
-                                  variant="outline-danger" 
-                                  size="sm" 
-                                  onClick={() => handleDelete(loc.id)} 
-                                  className="d-flex align-items-center justify-content-center gap-1"
-                                >
-                                  <FaTrashAlt />
-                                  <span>إلغاء</span>
-                                </Button>
                               </>
                             )
                           )}
@@ -937,6 +1027,33 @@ const ManageMap = () => {
                   value={reviewForm.details_en}
                   onChange={e => setReviewForm({ ...reviewForm, details_en: e.target.value })}
                 />
+              </Form.Group>
+            </Col>
+            {/* Color picker for the marker */}
+            <Col md={12}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-bold d-flex align-items-center gap-2">
+                  🎨 لون المعلم على الخريطة
+                </Form.Label>
+                <div className="d-flex align-items-center gap-3 flex-wrap">
+                  <input
+                    type="color"
+                    value={reviewForm.color || '#003087'}
+                    onChange={e => setReviewForm({ ...reviewForm, color: e.target.value })}
+                    style={{ width: 48, height: 40, border: 'none', borderRadius: 8, cursor: 'pointer', padding: 2 }}
+                    title="اختر لون المعلم"
+                  />
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: reviewForm.color || '#003087', border: '3px solid #dee2e6', boxShadow: '0 2px 6px rgba(0,0,0,0.15)' }} />
+                  <span className="text-muted small">{reviewForm.color || '#003087'}</span>
+                  {['#003087','#10b981','#f59e0b','#ef4444','#8b5cf6','#0dcaf0','#fd7e14','#6c757d'].map(c => (
+                    <div
+                      key={c}
+                      onClick={() => setReviewForm({ ...reviewForm, color: c })}
+                      style={{ width: 28, height: 28, borderRadius: '50%', background: c, cursor: 'pointer', border: (reviewForm.color || '#003087') === c ? '3px solid #000' : '2px solid #dee2e6', transition: 'transform 0.15s' }}
+                      title={c}
+                    />
+                  ))}
+                </div>
               </Form.Group>
             </Col>
           </Row>

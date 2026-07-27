@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Container, Row, Col, Alert } from 'react-bootstrap';
 import { motion } from 'motion/react';
 import {
@@ -7,6 +7,7 @@ import {
   FaExclamationCircle, FaFileAlt, FaIdCard
 } from 'react-icons/fa';
 import { useLanguage } from '../../../context/LanguageContext';
+import { api } from '../../../services/api';
 import './complaints.css';
 
 const ComplaintsPage = () => {
@@ -24,15 +25,23 @@ const ComplaintsPage = () => {
   });
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    await new Promise(r => setTimeout(r, 1200));
-    setLoading(false);
-    setSent(true);
-    setForm({ name: '', email: '', phone: '', id_number: '', complaint_type: '', subject: '', message: '' });
-    setTimeout(() => setSent(false), 7000);
+    setErrorMsg('');
+    try {
+      await api.createComplaint(form);
+      setSent(true);
+      setForm({ name: '', email: '', phone: '', id_number: '', complaint_type: '', subject: '', message: '' });
+      setTimeout(() => setSent(false), 7000);
+    } catch (err) {
+      console.error(err);
+      setErrorMsg(err.message || (isRtl ? 'حدث خطأ أثناء إرسال الشكوى، يرجى المحاولة لاحقاً' : 'Error sending complaint, please try again later'));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const infoItems = [
@@ -187,6 +196,13 @@ const ComplaintsPage = () => {
                     {isRtl
                       ? 'تم إرسال شكواك بنجاح! سنتواصل معك في أقرب وقت ممكن.'
                       : 'Your complaint has been submitted successfully! We will contact you as soon as possible.'}
+                  </Alert>
+                )}
+
+                {errorMsg && (
+                  <Alert style={{ borderRadius: 12, border: 'none', background: '#fef2f2', color: '#991b1b', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <FaExclamationCircle />
+                    {errorMsg}
                   </Alert>
                 )}
 

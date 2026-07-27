@@ -69,6 +69,9 @@ export const API_ENDPOINTS = {
     working_papers: {
         index: `${BASE_URL}/working-papers`,
     },
+    homepage_images: {
+        index: `${BASE_URL}/homepage-images`,
+    },
     companies: {
         index: `${BASE_URL}/companies`,
         summary: `${BASE_URL}/companies/stats/summary`,
@@ -77,6 +80,26 @@ export const API_ENDPOINTS = {
         features: `${BASE_URL}/kml/features`,
         upload: `${BASE_URL}/kml/upload`,
         clear: `${BASE_URL}/kml/features/clear`,
+        updateFeatureColor: (id) => `${BASE_URL}/kml/features/${id}/color`,
+        updateFolderColor: `${BASE_URL}/kml/folders/color`,
+    },
+    complaints: {
+        index: `${BASE_URL}/complaints`,
+        create: `${BASE_URL}/complaints`,
+        updateStatus: (id) => `${BASE_URL}/complaints/${id}/status`,
+        delete: (id) => `${BASE_URL}/complaints/${id}`,
+    },
+    experts: {
+        index: `${BASE_URL}/experts`,
+        create: `${BASE_URL}/experts`,
+        updateStatus: (id) => `${BASE_URL}/experts/${id}/status`,
+        delete: (id) => `${BASE_URL}/experts/${id}`,
+    },
+    employeeRequests: {
+        index: `${BASE_URL}/employee-requests`,
+        create: `${BASE_URL}/employee-requests`,
+        updateStatus: (id) => `${BASE_URL}/employee-requests/${id}/status`,
+        delete: (id) => `${BASE_URL}/employee-requests/${id}`,
     },
     translateAll: `${BASE_URL}/translate-all`,
 };

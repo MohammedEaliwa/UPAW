@@ -1,11 +1,11 @@
 import React from 'react';
-import { Container, Row, Col, Button, Badge } from 'react-bootstrap';
+import { Container, Row, Col, Button } from 'react-bootstrap';
 import { motion, AnimatePresence } from 'motion/react';
 import * as FaIcons from 'react-icons/fa';
-import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../context/LanguageContext';
 import { api } from '../../../services/api';
 import { UPLOADS_URL } from '../../../config/apiEndpoints';
+import PrimaryButton from '../../../components/ui/PrimaryButton';
 import './about.css';
 const About = () => {
   const { locale, t } = useLanguage();
@@ -17,7 +17,6 @@ const About = () => {
   
   const treeContainerRef = React.useRef(null);
   const [scrollState, setScrollState] = React.useState(0); // 0: President, 1: Offices, 2: Administrations
-  const [scrollProgress, setScrollProgress] = React.useState(0);
 
   React.useEffect(() => {
     api.getPageAbout()
@@ -84,7 +83,6 @@ const About = () => {
       
       let progress = scrolled / totalScrollRange;
       progress = Math.max(0, Math.min(1, progress));
-      setScrollProgress(progress);
       
       if (progress < 0.22) {
         setScrollState(0);
@@ -540,11 +538,14 @@ const About = () => {
                 </p>
               )}
               {(isRtl ? section.banner_btn_text_ar : section.banner_btn_text_en) && (
-                <Link to={section.banner_btn_link || '#'} className="btn-primary-custom text-decoration-none d-inline-flex align-items-center gap-2" 
-                   style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', backdropFilter: 'blur(10px)', color: '#fff', padding: '10px 24px', borderRadius: 99, fontWeight: 600 }}>
+                <PrimaryButton 
+                  to={section.banner_btn_link || '#'} 
+                  variant="primary"
+                  style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', backdropFilter: 'blur(10px)' }}
+                >
                   <FaIcons.FaArrowLeft size={14} style={{ transform: isRtl ? 'none' : 'rotate(180deg)' }} />
                   {isRtl ? section.banner_btn_text_ar : section.banner_btn_text_en}
-                </Link>
+                </PrimaryButton>
               )}
             </div>
           </div>
@@ -619,8 +620,45 @@ const About = () => {
       </div>
 
       <Container style={{ marginTop: 60 }}>
-        {/* Dynamic Content from Database */}
-        {pageData && (
+        {/* Dynamic Content from Database / Skeleton Loader */}
+        {!pageData ? (
+          <div>
+            {/* Introduction Card Skeleton */}
+            <Row className="g-4 mb-5">
+              <Col lg={12}>
+                <div className="card-custom p-5 skeleton-pulse" style={{ height: 280 }} />
+              </Col>
+            </Row>
+
+            {/* Tasks Section Skeleton */}
+            <div style={{ marginBottom: '4rem' }}>
+              <div className="text-center mb-5">
+                <div className="skeleton-pulse mx-auto" style={{ width: 140, height: 24, marginBottom: 12, borderRadius: 99 }} />
+                <div className="skeleton-pulse mx-auto" style={{ width: 220, height: 36, marginBottom: 12 }} />
+                <div className="skeleton-pulse mx-auto" style={{ width: 60, height: 4 }} />
+              </div>
+              <Row className="g-4">
+                {[1, 2, 3].map(i => (
+                  <Col md={6} lg={4} key={i}>
+                    <div className="skeleton-pulse" style={{ height: 110, borderRadius: 16 }} />
+                  </Col>
+                ))}
+              </Row>
+            </div>
+
+            {/* Tree Section Skeleton */}
+            <div style={{ marginBottom: '5rem' }}>
+              <div className="text-center mb-5">
+                <div className="skeleton-pulse mx-auto" style={{ width: 140, height: 24, marginBottom: 12, borderRadius: 99 }} />
+                <div className="skeleton-pulse mx-auto" style={{ width: 220, height: 36, marginBottom: 12 }} />
+                <div className="skeleton-pulse mx-auto" style={{ width: 60, height: 4 }} />
+              </div>
+              <div className="d-flex justify-content-center mb-5">
+                <div className="skeleton-pulse" style={{ width: 280, height: 380, borderRadius: 24 }} />
+              </div>
+            </div>
+          </div>
+        ) : (
           <Row className="g-4 mb-5">
             <Col lg={12}>
               <motion.div
@@ -637,6 +675,7 @@ const About = () => {
             </Col>
           </Row>
         )}
+
 
         {/* Dynamic Sections */}
         {pageData?.sections && pageData.sections.length > 0 && (
@@ -922,10 +961,14 @@ const About = () => {
             <p style={{ color: 'rgba(255,255,255,0.75)', marginBottom: '2rem', fontSize: '1rem' }}>
               {t('about.ctaDesc')}
             </p>
-            <Link to="/register" className="btn-primary-custom text-decoration-none" style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', backdropFilter: 'blur(10px)' }}>
+            <PrimaryButton 
+              to="/register" 
+              variant="primary" 
+              style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', backdropFilter: 'blur(10px)' }}
+            >
               <FaIcons.FaUsers size={16} />
               {t('about.ctaBtn')}
-            </Link>
+            </PrimaryButton>
           </div>
         </div>
       </Container>

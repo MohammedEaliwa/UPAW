@@ -301,6 +301,57 @@ const translations = {
   }
 };
 
+const AR_EN_MAP = {
+  'القرارات واللوائح': 'Decisions & Regulations',
+  'القرارات و اللوائح': 'Decisions & Regulations',
+  'القرارات': 'Decisions',
+  'اللوائح': 'Regulations',
+  'قوانين': 'Laws',
+  'تشريعات': 'Legislation',
+  'ورقات العمل': 'Working Papers',
+  'ورقة عمل': 'Working Paper',
+  'الخريطة التفاعلية': 'Interactive Map',
+  'اتصل بنا': 'Contact Us',
+  'عن الهيئة': 'About Authority',
+  'الرئيسية': 'Home',
+  'الأخبار': 'News',
+  'المركز الإعلامي': 'Media Center',
+  'عرض القرار': 'View Decision',
+  'فتح PDF': 'Open PDF',
+  'المُدخل بواسطة': 'Added By',
+  'مدخل بيانات': 'Data Entry Staff',
+  'مسؤول النظام': 'System Admin',
+  'أدمن': 'Admin',
+  'رقم القرار': 'Decision No.',
+  'السنة': 'Year',
+  'التصنيف': 'Category',
+  'إغلاق': 'Close',
+  'تحميل': 'Download',
+  'بحث': 'Search',
+  'عرض': 'View',
+  'نوع الملف غير مدعوم': 'File type not supported',
+  'محتوى محمي': 'Protected Content',
+  'حجب أمني تلقائي': 'Automatic Security Shield',
+  'لوحة التحكم': 'Dashboard',
+  'تسجيل الدخول': 'Login',
+  'تسجيل الخروج': 'Logout',
+  'إدارة المستخدمين': 'User Management',
+  'إحصائيات': 'Statistics',
+  'الهيئة الوطنية للتخطيط العمراني': 'National Urban Planning Authority',
+  'الجمهورية الليبية': 'State of Libya',
+};
+
+export function autoTranslateText(text, currentLocale = 'en') {
+  if (!text || typeof text !== 'string') return text;
+  if (currentLocale !== 'en') return text;
+  let res = text;
+  for (const [ar, en] of Object.entries(AR_EN_MAP)) {
+    if (res === ar) return en;
+    res = res.replaceAll(ar, en);
+  }
+  return res;
+}
+
 export const LanguageProvider = ({ children }) => {
   const [locale, setLocale] = useState(() => {
     const saved = localStorage.getItem('upa_locale');
@@ -328,10 +379,18 @@ export const LanguageProvider = ({ children }) => {
     setLocale(prev => prev === 'ar' ? 'en' : 'ar');
   };
 
-  const t = (key) => translations[locale][key] || key;
+  const t = (key, fallback) => {
+    if (translations[locale] && translations[locale][key]) {
+      return translations[locale][key];
+    }
+    if (locale === 'en') {
+      return autoTranslateText(fallback || key, locale);
+    }
+    return fallback || key;
+  };
 
   return (
-    <LanguageContext.Provider value={{ locale, setLocale, toggleLanguage, t }}>
+    <LanguageContext.Provider value={{ locale, setLocale, toggleLanguage, t, autoTranslateText: (txt) => autoTranslateText(txt, locale) }}>
       {children}
     </LanguageContext.Provider>
   );

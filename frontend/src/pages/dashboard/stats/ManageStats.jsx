@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Container, Row, Col, Table, Button, Form, Card, Badge } from 'react-bootstrap';
-import { FaPlusCircle, FaEdit, FaTrashAlt, FaChartLine, FaRobot, FaMagic, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa';
+import { FaPlusCircle, FaEdit, FaTrashAlt, FaChartLine, FaRobot, FaMagic } from 'react-icons/fa';
 import PrimaryButton from '../../../components/ui/PrimaryButton';
 import ModernModal from '../../../components/ModernModal';
 import { useToast } from '../../../context/ToastContext';

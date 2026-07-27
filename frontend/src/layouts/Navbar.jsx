@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { api } from '../services/api';
 import {
   FaBars, FaTimes, FaGlobe, FaSignInAlt, FaMoon, FaSun, FaChevronDown, FaChevronLeft, FaChevronRight,
   FaHome, FaInfoCircle, FaUsers, FaBookOpen, FaGavel,
@@ -34,8 +35,18 @@ const NAV_STRUCTURE = [
     children: [
       { to: '/about', label: 'نبذة عن الهيئة', labelEn: 'About Authority', icon: <FaInfoCircle />, desc: 'التاريخ والرؤية والرسالة', descEn: 'History, vision & mission' },
       { to: '/page/%d8%aa%d8%b9%d8%b1%d9%8a%d9%81-%d8%a8%d8%a7%d9%84%d9%85%d8%b5%d9%84%d8%ad%d8%a9', label: 'التعريف بالمصلحة', labelEn: 'About the Authority', icon: <FaUsers />, desc: 'الهيكل التنظيمي والإدارة', descEn: 'Organizational structure' },
-      { to: '/library', label: 'المكتبة', labelEn: 'Library', icon: <FaBookOpen />, desc: 'الوثائق والمراجع', descEn: 'Documents & references' },
-      { to: '/page/%d8%a7%d9%84%d9%82%d8%b1%d8%a7%d8%b1%d8%a7%d8%aa-%d9%88-%d8%a7%d9%84%d9%84%d9%88%d8%a7%d8%a6%d8%ad', label: 'القرارات واللوائح', labelEn: 'Decisions & Regulations', icon: <FaGavel />, desc: 'اللوائح والقرارات الرسمية', descEn: 'Official rules & decisions' },
+      {
+        label: 'المكتبة',
+        labelEn: 'Library',
+        icon: <FaBookOpen />,
+        desc: 'الوثائق والمراجع',
+        descEn: 'Documents & references',
+        _noDbChildren: true,
+        children: [
+          { to: '/library', label: 'كتب', labelEn: 'Books', icon: <FaBookOpen />, desc: 'قائمة الكتب والمراجع', descEn: 'Books & references list' },
+        ],
+      },
+      { to: '/decisions', label: 'القرارات واللوائح', labelEn: 'Decisions & Regulations', icon: <FaGavel />, desc: 'اللوائح والقرارات الرسمية', descEn: 'Official rules & decisions' },
     ],
   },
   {
@@ -122,7 +133,7 @@ const NAV_STRUCTURE = [
     description: 'الأبحاث والتقارير التخطيطية',
     descriptionEn: 'Research & planning reports',
     children: [
-      { to: '/page/%d8%aa%d9%82%d8%a7%d8%b1%d9%8a%d8%b1', label: 'التقارير', labelEn: 'Reports', icon: <FaChartBar />, desc: 'التقارير السنوية والدورية', descEn: 'Annual & periodic reports' },
+      { to: '/page/%d8%aa%d9%82%d8%a7%d8%b1%d9%8a%d8%b1', label: 'التقارير', labelEn: 'Reports', icon: <FaChartBar />, desc: 'التقارير السنوية والدورية', descEn: 'Annual & periodic reports', _noDbChildren: true },
       {
         label: 'المخططات',
         labelEn: 'Plans',
@@ -152,7 +163,17 @@ const NAV_STRUCTURE = [
     descriptionEn: 'Available electronic services',
     children: [
       { to: '/interactive-map', label: 'الخريطة التفاعلية', labelEn: 'Interactive Map', icon: <FaMapPin />, desc: 'استعرض المناطق التخطيطية', descEn: 'Browse planning areas' },
-      { to: '/company-registration', label: 'تسجيل الشركات', labelEn: 'Company Registration', icon: <FaRegBuilding />, desc: 'سجّل شركتك وتعرف على المسجلين', descEn: 'Register your company' },
+      {
+        label: 'تسجيل',
+        labelEn: 'Registration',
+        icon: <FaRegBuilding />,
+        desc: 'تسجيل الشركات والخبراء',
+        descEn: 'Register companies & experts',
+        children: [
+          { to: '/company-registration', label: 'تسجيل الشركات', labelEn: 'Company Registration', icon: <FaRegBuilding />, desc: 'سجّل شركتك وتعرف على المسجلين', descEn: 'Register your company' },
+          { to: '/experts-registration', label: 'تسجيل الخبراء والمستشارين', labelEn: 'Experts & Consultants Registration', icon: <FaUsers />, desc: 'تسجيل الخبراء والمستشارين المعتمدين', descEn: 'Register as an expert or consultant' },
+        ],
+      },
       { to: '/gallery', label: 'معرض الصور', labelEn: 'Photo Gallery', icon: <FaImages />, desc: 'صور وفعاليات الهيئة الوطنية', descEn: 'Authority photos & events' },
       { to: '/complaints', label: 'تقديم شكوى', labelEn: 'Submit Complaint', icon: <FaComments />, desc: 'تقديم شكاوى ومقترحات', descEn: 'Submit complaints & suggestions' },
     ],
@@ -233,38 +254,65 @@ const DropdownMenu = ({ item, isRtl, onClose }) => {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -12, scale: 0.95 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -8, scale: 0.95 }}
-      transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+      initial={{ opacity: 0, y: 8, scale: 0.97, x: isRtl ? '50%' : '-50%' }}
+      animate={{ opacity: 1, y: 0, scale: 1, x: isRtl ? '50%' : '-50%' }}
+      exit={{ opacity: 0, y: 6, scale: 0.97, x: isRtl ? '50%' : '-50%' }}
+      transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
       style={{
         position: 'absolute',
-        top: 'calc(100% + 4px)',
-        ...(isRtl
-          ? { right: '-50%', transform: 'translateX(50%)' }
-          : { left: '70%', transform: 'translateX(-50%)' }
-        ),
-        minWidth: 290,
-        background: 'var(--card-bg)',
-        borderRadius: 16,
-        boxShadow: '0 16px 40px rgba(0,0,0,0.18), 0 4px 12px rgba(0,0,0,0.09)',
-        border: '1px solid var(--border)',
+        top: 'calc(100% + 10px)',
+        ...(isRtl ? { right: '50%' } : { left: '50%' }),
+        minWidth: 300,
+        background: isDarkMode
+          ? 'rgba(10, 22, 48, 0.97)'
+          : 'rgba(255, 255, 255, 0.98)',
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
+        borderRadius: 18,
+        boxShadow: isDarkMode
+          ? '0 24px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.07)'
+          : '0 24px 60px rgba(0,48,135,0.14), 0 0 0 1px rgba(0,48,135,0.08)',
         overflow: 'visible',
         zIndex: 9999,
       }}
     >
-      {/* Header */}
+      {/* Header — clean accent top bar + title */}
       <div style={{
-        padding: '16px 20px 12px',
-        background: 'linear-gradient(135deg, #003087 0%, #0056b3 100%)',
-        borderBottom: '1px solid rgba(0,48,135,0.15)',
-        borderRadius: '16px 16px 0 0',
+        padding: '14px 20px 12px',
+        borderBottom: isDarkMode
+          ? '1px solid rgba(255,255,255,0.07)'
+          : '1px solid rgba(0,48,135,0.08)',
+        background: isDarkMode
+          ? 'rgba(255,255,255,0.03)'
+          : 'rgba(0,48,135,0.03)',
+        borderRadius: '18px 18px 0 0',
+        position: 'relative',
+        overflow: 'hidden',
       }}>
-        <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#ffffff', fontFamily: 'Cairo, Tajawal, sans-serif' }}>
+        {/* Top accent line */}
+        <div style={{
+          position: 'absolute',
+          top: 0, left: 0, right: 0,
+          height: 3,
+          background: 'linear-gradient(90deg, #003087 0%, #0077e6 50%, #00c2ff 100%)',
+          borderRadius: '0 0 2px 2px',
+        }} />
+        <div style={{
+          fontWeight: 800,
+          fontSize: '0.9rem',
+          color: isDarkMode ? '#e8f0ff' : '#003087',
+          fontFamily: 'Cairo, Tajawal, sans-serif',
+          marginTop: 4,
+        }}>
           {headerLabel}
         </div>
         {headerDesc && (
-          <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.75)', marginTop: 2, fontFamily: 'Cairo, Tajawal, sans-serif' }}>
+          <div style={{
+            fontSize: '0.73rem',
+            color: isDarkMode ? 'rgba(255,255,255,0.45)' : 'rgba(0,48,135,0.5)',
+            marginTop: 3,
+            fontFamily: 'Cairo, Tajawal, sans-serif',
+          }}>
             {headerDesc}
           </div>
         )}
@@ -285,44 +333,51 @@ const DropdownMenu = ({ item, isRtl, onClose }) => {
                 style={{
                   display: 'flex', alignItems: 'center', gap: 12,
                   padding: '10px 14px', borderRadius: 12, cursor: 'pointer',
-                  marginBottom: 2, transition: 'all 0.18s ease',
+                  marginBottom: 2,
+                  transition: 'all 0.18s cubic-bezier(0.16,1,0.3,1)',
                   background: hoveredIdx === i
-                    ? (isDarkMode ? 'rgba(56, 194, 255, 0.12)' : 'rgba(0,48,135,0.06)')
+                    ? (isDarkMode ? 'rgba(0,120,255,0.1)' : 'rgba(0,48,135,0.06)')
                     : 'transparent',
                 }}
               >
                 <div style={{
                   width: 36, height: 36, borderRadius: 10, flexShrink: 0,
                   background: hoveredIdx === i
-                    ? (isDarkMode ? 'linear-gradient(135deg, #0088ff, #00c6ff)' : 'linear-gradient(135deg,#003087,#0066cc)')
+                    ? 'linear-gradient(135deg,#003087,#0077e6)'
                     : (isDarkMode
-                      ? 'linear-gradient(135deg, rgba(255,255,255,0.1), rgba(0,120,255,0.15))'
-                      : 'linear-gradient(135deg, rgba(0,48,135,0.1), rgba(0,120,255,0.08))'),
+                      ? 'rgba(255,255,255,0.07)'
+                      : 'rgba(0,48,135,0.07)'),
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: hoveredIdx === i ? '#fff' : (isDarkMode ? '#fff' : '#003087'),
+                  color: hoveredIdx === i ? '#fff' : (isDarkMode ? 'rgba(255,255,255,0.75)' : '#003087'),
                   fontSize: '0.9rem', transition: 'all 0.18s ease',
-                }} className="dropdown-icon-box">
+                }}>
                   {child.icon}
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{
-                    fontWeight: 700,
-                    fontSize: '0.88rem',
+                    fontWeight: 700, fontSize: '0.87rem',
                     color: hoveredIdx === i
-                      ? (isDarkMode ? '#38c2ff' : '#003087')
-                      : (isDarkMode ? '#fff' : '#1a2850'),
-                    fontFamily: 'Cairo, Tajawal, sans-serif',
-                    lineHeight: 1.3
+                      ? (isDarkMode ? '#60aaff' : '#003087')
+                      : (isDarkMode ? '#dbe8ff' : '#1a2850'),
+                    fontFamily: 'Cairo, Tajawal, sans-serif', lineHeight: 1.3,
+                    transition: 'color 0.15s ease',
                   }}>
                     {isRtl ? child.label : (child.labelEn || child.label)}
                   </div>
                   {(child.desc || child.descEn) && (
-                    <div style={{ fontSize: '0.73rem', color: isDarkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,48,135,0.5)', marginTop: 1, fontFamily: 'Cairo, Tajawal, sans-serif' }}>
+                    <div style={{
+                      fontSize: '0.72rem',
+                      color: isDarkMode ? 'rgba(255,255,255,0.4)' : 'rgba(0,48,135,0.45)',
+                      marginTop: 1, fontFamily: 'Cairo, Tajawal, sans-serif',
+                    }}>
                       {isRtl ? child.desc : child.descEn}
                     </div>
                   )}
                 </div>
-                <div style={{ color: isDarkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,48,135,0.45)', fontSize: '0.7rem', flexShrink: 0 }}>
+                <div style={{
+                  color: isDarkMode ? 'rgba(255,255,255,0.3)' : 'rgba(0,48,135,0.3)',
+                  fontSize: '0.65rem', flexShrink: 0,
+                }}>
                   {isRtl ? <FaChevronLeft /> : <FaChevronRight />}
                 </div>
               </div>
@@ -353,53 +408,46 @@ const DropdownMenu = ({ item, isRtl, onClose }) => {
                 borderRadius: 12,
                 textDecoration: 'none',
                 marginBottom: 2,
-                transition: 'all 0.18s ease',
+                transition: 'all 0.18s cubic-bezier(0.16,1,0.3,1)',
               }}
             >
               <div style={{
                 width: 36, height: 36, borderRadius: 10,
-                background: isDarkMode
-                  ? 'linear-gradient(135deg, rgba(255,255,255,0.1), rgba(0,120,255,0.15))'
-                  : 'linear-gradient(135deg, rgba(0,48,135,0.1), rgba(0,120,255,0.08))',
+                background: isDarkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,48,135,0.07)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: isDarkMode ? '#fff' : '#003087', fontSize: '0.9rem', flexShrink: 0,
-                transition: 'all 0.18s ease',
+                color: isDarkMode ? 'rgba(255,255,255,0.75)' : '#003087',
+                fontSize: '0.9rem', flexShrink: 0, transition: 'all 0.18s ease',
               }} className="dropdown-icon-box">
                 {child.icon}
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: '0.88rem', color: isDarkMode ? '#fff' : '#1a2850', fontFamily: 'Cairo, Tajawal, sans-serif', lineHeight: 1.3 }}>
+                <div style={{
+                  fontWeight: 700, fontSize: '0.87rem',
+                  color: isDarkMode ? '#dbe8ff' : '#1a2850',
+                  fontFamily: 'Cairo, Tajawal, sans-serif', lineHeight: 1.3,
+                }}>
                   {isRtl ? child.label : (child.labelEn || child.label)}
                 </div>
                 {(child.desc || child.descEn) && (
-                  <div style={{ fontSize: '0.73rem', color: isDarkMode ? 'rgba(255,255,255,0.8)' : 'rgba(0,48,135,0.5)', marginTop: 1, fontFamily: 'Cairo, Tajawal, sans-serif' }}>
+                  <div style={{
+                    fontSize: '0.72rem',
+                    color: isDarkMode ? 'rgba(255,255,255,0.4)' : 'rgba(0,48,135,0.45)',
+                    marginTop: 1, fontFamily: 'Cairo, Tajawal, sans-serif',
+                  }}>
                     {isRtl ? child.desc : child.descEn}
                   </div>
                 )}
               </div>
-              <div style={{ color: isDarkMode ? 'rgba(255,255,255,0.35)' : 'rgba(0,48,135,0.3)', fontSize: '0.7rem', flexShrink: 0 }}>
+              <div style={{
+                color: isDarkMode ? 'rgba(255,255,255,0.25)' : 'rgba(0,48,135,0.25)',
+                fontSize: '0.65rem', flexShrink: 0,
+              }}>
                 {isRtl ? <FaArrowLeft /> : <FaArrowRight />}
               </div>
             </Link>
           )
         ))}
       </div>
-
-      {/* Arrow pointer */}
-      <div style={{
-        position: 'absolute',
-        top: -7,
-        ...(isRtl
-          ? { right: '50%', transform: 'translateX(50%) rotate(45deg)' }
-          : { left: '50%', transform: 'translateX(-50%) rotate(45deg)' }
-        ),
-        width: 14, height: 14,
-        background: isDarkMode ? 'var(--card-bg)' : '#fff',
-        borderTop: isDarkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,48,135,0.1)',
-        borderLeft: isDarkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,48,135,0.1)',
-        borderRadius: 3,
-        zIndex: 1,
-      }} />
     </motion.div>
   );
 };
@@ -495,10 +543,113 @@ const NavItem = ({ item, isActive, isRtl }) => {
 const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [openSections, setOpenSections] = useState({});
   const location = useLocation();
   const { locale, toggleLanguage } = useLanguage();
   const { isDarkMode, toggleTheme } = useTheme();
   const isRtl = locale === 'ar';
+
+  const [dbPages, setDbPages] = useState([]);
+
+  useEffect(() => {
+    api.getPages()
+      .then(data => {
+        const arr = Array.isArray(data) ? data : (data?.data || []);
+        setDbPages(arr);
+      })
+      .catch(err => console.error('Navbar error fetching pages:', err));
+  }, [location.pathname]);
+
+  const parentMapping = useMemo(() => ({
+    'projects': ['المشاريع', 'projects'],
+    'about': ['عن الهيئة', 'about us'],
+    '%d8%a7%d9%84%d8%a3%d9%82%d8%a7%d9%84%d9%8a%d9%85-%d8%a7%d9%84%d8%aa%d8%ae%d8%b7%d9%8a%d8%b7%d9%8a%d8%a9': ['الأقاليم التخطيطية', 'planning regions'],
+    'الأقاليم التخطيطية': ['الأقاليم التخطيطية', 'planning regions'],
+  }), []);
+
+  const navItems = useMemo(() => {
+    const cloneNavStructure = (items) => {
+      return items.map(item => {
+        const cloned = { ...item };
+        if (item.children) {
+          cloned.children = cloneNavStructure(item.children);
+        }
+        return cloned;
+      });
+    };
+
+    const clone = cloneNavStructure(NAV_STRUCTURE);
+    const visiblePages = dbPages.filter(p => p.is_visible !== 0);
+
+    const findNode = (nodes, parentId) => {
+      if (!parentId) return null;
+      const decodedParentId = decodeURIComponent(parentId).toLowerCase();
+      
+      for (const node of nodes) {
+        if (node.to) {
+          const parts = node.to.split('/');
+          const slug = decodeURIComponent(parts[parts.length - 1] || '').toLowerCase();
+          if (slug === decodedParentId) {
+            return node;
+          }
+        }
+        
+        const labelAr = (node.label || '').toLowerCase();
+        const labelEn = (node.labelEn || '').toLowerCase();
+        if (labelAr === decodedParentId || labelEn === decodedParentId) {
+          return node;
+        }
+        
+        const mappedValues = parentMapping[decodedParentId] || parentMapping[parentId];
+        if (mappedValues) {
+          if (mappedValues.includes(node.label) || mappedValues.includes(node.labelEn?.toLowerCase())) {
+            return node;
+          }
+        }
+        
+        if (node.children) {
+          const found = findNode(node.children, parentId);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const sortedPages = [...visiblePages].sort((a, b) => {
+      if ((a.order_index || 0) !== (b.order_index || 0)) {
+        return (a.order_index || 0) - (b.order_index || 0);
+      }
+      return (a.title_ar || '').localeCompare(b.title_ar || '', 'ar');
+    });
+
+    sortedPages.forEach(page => {
+      if (['about', 'contact'].includes(page.id)) return;
+
+      if (page.parent_id) {
+        const parentNode = findNode(clone, page.parent_id);
+        if (parentNode && !parentNode._noDbChildren) {
+          if (!parentNode.children) parentNode.children = [];
+          
+          const exists = parentNode.children.some(child => {
+            const childSlug = child.to?.split('/').pop();
+            return childSlug === page.id;
+          });
+
+          if (!exists) {
+            parentNode.children.push({
+              to: `/page/${encodeURIComponent(page.id)}`,
+              label: page.title_ar,
+              labelEn: page.title_en || page.title_ar,
+              icon: <FaMapPin />
+            });
+          }
+        }
+      }
+    });
+
+    return clone;
+  }, [dbPages, parentMapping]);
+
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 40);
@@ -589,10 +740,10 @@ const Navbar = () => {
 
           {/* ── Desktop Nav ───────────────────────────────────── */}
           <div
-            className="d-none d-xl-flex align-items-center gap-0 flex-wrap justify-content-center"
+            className="d-none d-lg-flex align-items-center gap-0 flex-wrap justify-content-center"
             style={{ flex: 1, padding: '0 12px' }}
           >
-            {NAV_STRUCTURE.map((item, i) => (
+            {navItems.map((item, i) => (
               <NavItem
                 key={i}
                 item={item}
@@ -607,7 +758,7 @@ const Navbar = () => {
           </div>
 
           {/* ── Action Buttons ────────────────────────────────── */}
-          <div className="d-none d-xl-flex align-items-center gap-2">
+          <div className="d-none d-lg-flex align-items-center gap-2">
             {/* Language */}
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -667,7 +818,7 @@ const Navbar = () => {
           {/* ── Mobile Toggle ─────────────────────────────────── */}
           <motion.button
             whileTap={{ scale: 0.9 }}
-            className="d-xl-none action-btn-glass icon-only"
+            className="d-lg-none action-btn-glass icon-only"
             onClick={() => setExpanded(!expanded)}
             style={{ padding: '8px 10px', borderRadius: 12, cursor: 'pointer', border: 'none', display: 'flex', alignItems: 'center' }}
             aria-label="Toggle Menu"
@@ -698,103 +849,136 @@ const Navbar = () => {
               style={{
                 overflow: 'hidden',
                 borderTop: '1px solid rgba(0,48,135,0.08)',
-                background: isDarkMode ? 'rgba(15,20,40,0.96)' : 'rgba(255,255,255,0.96)',
+                background: isDarkMode ? 'rgba(15,20,40,0.97)' : 'rgba(255,255,255,0.97)',
                 backdropFilter: 'blur(24px)',
               }}
             >
-              <div className="container py-3">
-                {NAV_STRUCTURE.map((item, i) => (
-                  <div key={i}>
-                    {item.children ? (
-                      <>
-                        <div style={{
-                          display: 'flex', alignItems: 'center', gap: 8,
-                          fontWeight: 700, color: 'var(--primary)', padding: '10px 12px',
-                          fontSize: '0.9rem', fontFamily: 'Cairo, Tajawal, sans-serif',
-                        }}>
-                          <span style={{ fontSize: '0.85rem' }}>{item.icon}</span>
-                          {isRtl ? item.label : item.labelEn}
-                        </div>
-                        {item.children.map((child, j) => (
-                          child.children ? (
-                            /* Nested group in mobile: render header + sub-links */
-                            <div key={j}>
-                              <div style={{
-                                display: 'flex', alignItems: 'center', gap: 8,
-                                padding: '6px 36px', color: 'var(--primary)',
-                                fontSize: '0.82rem', fontWeight: 700,
-                                fontFamily: 'Cairo, Tajawal, sans-serif',
-                              }}>
-                                <span style={{ fontSize: '0.78rem' }}>{child.icon}</span>
-                                {isRtl ? child.label : (child.labelEn || child.label)}
-                              </div>
-                              {child.children.map((grandchild, k) => (
-                                <Link
-                                  key={k}
-                                  to={grandchild.to}
-                                  onClick={() => setExpanded(false)}
-                                  style={{
-                                    display: 'flex', alignItems: 'center', gap: 10,
-                                    padding: '7px 48px', color: 'var(--text)',
-                                    textDecoration: 'none', fontSize: '0.84rem', fontWeight: 500,
-                                    fontFamily: 'Cairo, Tajawal, sans-serif',
-                                    borderRight: '2px solid var(--primary)',
-                                  }}
-                                >
-                                  <span style={{ color: 'var(--primary)', fontSize: '0.76rem' }}>{grandchild.icon}</span>
-                                  {isRtl ? grandchild.label : (grandchild.labelEn || grandchild.label)}
-                                </Link>
-                              ))}
-                            </div>
-                          ) : (
-                            <Link
-                              key={j}
-                              to={child.to}
-                              onClick={() => setExpanded(false)}
-                              style={{
-                                display: 'flex', alignItems: 'center', gap: 10,
-                                padding: '8px 24px', color: 'var(--text)',
-                                textDecoration: 'none', fontSize: '0.86rem', fontWeight: 500,
-                                fontFamily: 'Cairo, Tajawal, sans-serif',
-                              }}
+              {/* Scrollable inner container */}
+              <div style={{ maxHeight: '80vh', overflowY: 'auto', overflowX: 'hidden' }}>
+                <div className="container py-3">
+                  {navItems.map((item, i) => (
+                    <div key={i} style={{ borderBottom: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,48,135,0.06)'}` }}>
+                      {item.children ? (
+                        <>
+                          {/* Accordion header — tappable to expand/collapse */}
+                          <button
+                            onClick={() => setOpenSections(prev => ({ ...prev, [i]: !prev[i] }))}
+                            style={{
+                              width: '100%', background: 'none', border: 'none', cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                              padding: '13px 12px', gap: 8,
+                              fontWeight: 700, color: 'var(--primary)', fontSize: '0.92rem',
+                              fontFamily: 'Cairo, Tajawal, sans-serif',
+                            }}
+                          >
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span style={{ fontSize: '0.85rem' }}>{item.icon}</span>
+                              {isRtl ? item.label : item.labelEn}
+                            </span>
+                            <motion.span
+                              animate={{ rotate: openSections[i] ? 180 : 0 }}
+                              transition={{ duration: 0.25 }}
+                              style={{ display: 'flex', fontSize: '0.75rem', color: 'var(--text-muted)' }}
                             >
-                              <span style={{ color: 'var(--primary)', fontSize: '0.8rem' }}>{child.icon}</span>
-                              {isRtl ? child.label : child.labelEn}
-                            </Link>
-                          )
-                        ))}
-
-                      </>
-                    ) : (
-                      <Link
-                        to={item.to}
-                        onClick={() => setExpanded(false)}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: 8,
-                          padding: '10px 12px', color: 'var(--text)',
-                          textDecoration: 'none', fontWeight: 600, fontSize: '0.9rem',
-                          borderBottom: '1px solid var(--border)',
-                          fontFamily: 'Cairo, Tajawal, sans-serif',
-                        }}
-                      >
-                        <span style={{ color: 'var(--primary)', fontSize: '0.85rem' }}>{item.icon}</span>
-                        {isRtl ? item.label : item.labelEn}
-                      </Link>
-                    )}
-                  </div>
-                ))}
-                <div className="d-flex gap-2 mt-3 flex-wrap">
-                  <button className="action-btn-glass" onClick={toggleLanguage} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', fontFamily: 'Cairo, Tajawal, sans-serif', border: 'none' }}>
-                    <FaGlobe size={13} />{isRtl ? 'English' : 'العربية'}
-                  </button>
-                  <button className="action-btn-glass icon-only" onClick={toggleTheme} style={{ display: 'flex', alignItems: 'center', padding: '8px 10px', borderRadius: 10, cursor: 'pointer', border: 'none' }}>
-                    {isDarkMode ? <FaSun size={15} /> : <FaMoon size={15} />}
-                  </button>
-                  <Link to="/login" onClick={() => setExpanded(false)}>
-                    <button className="login-btn-glass" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 18px', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', fontFamily: 'Cairo, Tajawal, sans-serif', border: 'none' }}>
-                      <FaSignInAlt size={13} />{isRtl ? 'تسجيل الدخول' : 'Login'}
+                              <FaChevronDown />
+                            </motion.span>
+                          </button>
+                          {/* Accordion content */}
+                          <AnimatePresence>
+                            {openSections[i] && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.22 }}
+                                style={{ overflow: 'hidden' }}
+                              >
+                                {item.children.map((child, j) => (
+                                  child.children ? (
+                                    <div key={j}>
+                                      <div style={{
+                                        display: 'flex', alignItems: 'center', gap: 8,
+                                        padding: '7px 28px', color: 'var(--primary)',
+                                        fontSize: '0.82rem', fontWeight: 700,
+                                        fontFamily: 'Cairo, Tajawal, sans-serif',
+                                        background: isDarkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,48,135,0.03)',
+                                      }}>
+                                        <span style={{ fontSize: '0.78rem' }}>{child.icon}</span>
+                                        {isRtl ? child.label : (child.labelEn || child.label)}
+                                      </div>
+                                      {child.children.map((grandchild, k) => (
+                                        <Link
+                                          key={k}
+                                          to={grandchild.to}
+                                          onClick={() => setExpanded(false)}
+                                          style={{
+                                            display: 'flex', alignItems: 'center', gap: 10,
+                                            padding: '9px 44px', color: 'var(--text)',
+                                            textDecoration: 'none', fontSize: '0.84rem', fontWeight: 500,
+                                            fontFamily: 'Cairo, Tajawal, sans-serif',
+                                            borderRight: isRtl ? '2px solid var(--primary)' : 'none',
+                                            borderLeft: isRtl ? 'none' : '2px solid var(--primary)',
+                                            minHeight: 44,
+                                          }}
+                                        >
+                                          <span style={{ color: 'var(--primary)', fontSize: '0.76rem', flexShrink: 0 }}>{grandchild.icon}</span>
+                                          {isRtl ? grandchild.label : (grandchild.labelEn || grandchild.label)}
+                                        </Link>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <Link
+                                      key={j}
+                                      to={child.to}
+                                      onClick={() => setExpanded(false)}
+                                      style={{
+                                        display: 'flex', alignItems: 'center', gap: 10,
+                                        padding: '10px 28px', color: 'var(--text)',
+                                        textDecoration: 'none', fontSize: '0.88rem', fontWeight: 500,
+                                        fontFamily: 'Cairo, Tajawal, sans-serif',
+                                        minHeight: 44,
+                                      }}
+                                    >
+                                      <span style={{ color: 'var(--primary)', fontSize: '0.8rem', flexShrink: 0 }}>{child.icon}</span>
+                                      {isRtl ? child.label : child.labelEn}
+                                    </Link>
+                                  )
+                                ))}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </>
+                      ) : (
+                        <Link
+                          to={item.to}
+                          onClick={() => setExpanded(false)}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 8,
+                            padding: '13px 12px', color: 'var(--text)',
+                            textDecoration: 'none', fontWeight: 600, fontSize: '0.92rem',
+                            fontFamily: 'Cairo, Tajawal, sans-serif',
+                            minHeight: 44,
+                          }}
+                        >
+                          <span style={{ color: 'var(--primary)', fontSize: '0.85rem' }}>{item.icon}</span>
+                          {isRtl ? item.label : item.labelEn}
+                        </Link>
+                      )}
+                    </div>
+                  ))}
+                  <div className="d-flex gap-2 mt-3 flex-wrap">
+                    <button className="action-btn-glass" onClick={toggleLanguage} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', fontFamily: 'Cairo, Tajawal, sans-serif', border: 'none', minHeight: 44 }}>
+                      <FaGlobe size={13} />{isRtl ? 'English' : 'العربية'}
                     </button>
-                  </Link>
+                    <button className="action-btn-glass icon-only" onClick={toggleTheme} style={{ display: 'flex', alignItems: 'center', padding: '10px 12px', borderRadius: 10, cursor: 'pointer', border: 'none', minHeight: 44 }}>
+                      {isDarkMode ? <FaSun size={15} /> : <FaMoon size={15} />}
+                    </button>
+                    <Link to="/login" onClick={() => setExpanded(false)}>
+                      <button className="login-btn-glass" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 18px', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', fontFamily: 'Cairo, Tajawal, sans-serif', border: 'none', minHeight: 44 }}>
+                        <FaSignInAlt size={13} />{isRtl ? 'تسجيل الدخول' : 'Login'}
+                      </button>
+                    </Link>
+                  </div>
                 </div>
               </div>
             </motion.div>

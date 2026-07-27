@@ -1,26 +1,18 @@
 import { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const RouteChangeHandler = () => {
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const { user } = useAuth() || {};
 
   useEffect(() => {
-    const isPreviewOrManaged =
-      location.pathname.startsWith('/page/') ||
-      location.pathname === '/about' ||
-      location.pathname === '/contact' ||
-      location.pathname === '/news' ||
-      location.pathname === '/interactive-map' ||
-      location.pathname === '/complaints';
-
-    if (!location.pathname.startsWith('/dashboard') && !isPreviewOrManaged) {
-      if (user) {
-        logout();
-      }
+    // If user is already logged in and attempts to go to /login or /register, redirect to dashboard
+    if (user && (location.pathname === '/login' || location.pathname === '/register')) {
+      navigate('/dashboard', { replace: true });
     }
-  }, [location.pathname]);
+  }, [location.pathname, user, navigate]);
 
   return null;
 };

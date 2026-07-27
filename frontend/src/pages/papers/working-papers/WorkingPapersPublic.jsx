@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Form, Spinner, Modal, Button } from 'react-bootstrap';
+import { useState, useEffect } from 'react';
+import { Container, Row, Col, Form, Modal, Button } from 'react-bootstrap';
 import { motion } from 'motion/react';
 import { FaSearch, FaFilter, FaFileAlt, FaCalendarAlt, FaDownload, FaFilePdf, FaFileWord } from 'react-icons/fa';
 import { useLanguage } from '../../../context/LanguageContext';
@@ -68,7 +68,7 @@ const WorkingPapersPublic = () => {
   return (
     <div className="working-papers-page" style={{ paddingBottom: 80 }}>
       {/* Header */}
-      <div className="papers-header" style={{
+      <div className="papers-header dark-hero-section" style={{
         background: 'linear-gradient(135deg, #001225 0%, #001d5a 50%, #003087 100%)',
         padding: '70px 0 50px',
         position: 'relative',
@@ -155,9 +155,10 @@ const WorkingPapersPublic = () => {
         {/* Papers List */}
         <div className="d-flex flex-column gap-4">
           {loading ? (
-            <div className="text-center py-5">
-              <Spinner animation="border" variant="primary" />
-              <p className="mt-2 text-muted">{isRtl ? 'جاري تحميل أوراق العمل...' : 'Loading working papers...'}</p>
+            <div className="d-flex flex-column gap-3">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="skeleton-pulse" style={{ height: 130, borderRadius: 16 }} />
+              ))}
             </div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-5 text-muted">

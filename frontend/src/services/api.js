@@ -1,9 +1,38 @@
 import { API_ENDPOINTS } from '../config/apiEndpoints';
 
+/** Silently flush the server-side file cache after any write operation */
+const invalidateServerCache = () => {
+    const base = import.meta.env.VITE_API_BASE || `${window.location.origin}/api`;
+    fetch(`${base}/cache/clear`, { method: 'POST' }).catch(() => {});
+    // Also clear our in-memory cache on any write
+    memCache.clear();
+};
+
+// ─── In-memory request cache (for the current page session) ───────────────────
+const memCache = new Map();
+const MEM_CACHE_TTL = 30_000; // 30 seconds default
+
+/**
+ * Cached fetch — only caches GET requests. Returns cached data if fresh.
+ * @param {string} url - The URL to fetch
+ * @param {number} [ttl=30000] - Cache TTL in ms
+ */
+const cachedFetch = async (url, ttl = MEM_CACHE_TTL) => {
+    const now = Date.now();
+    const hit = memCache.get(url);
+    if (hit && now - hit.ts < ttl) {
+        return hit.data;
+    }
+    const res = await fetch(url);
+    const data = await handleResponse(res);
+    memCache.set(url, { ts: now, data });
+    return data;
+};
+
 const handleResponse = async (response) => {
     // Normalize responses and surface useful error messages
     const contentType = response.headers.get('content-type') || '';
-    let payload = null;
+    let payload;
     if (contentType.includes('application/json')) {
         payload = await response.json().catch(() => null);
     } else {
@@ -15,6 +44,11 @@ const handleResponse = async (response) => {
     if (!response.ok) {
         const errorMsg = (payload && (payload.error || payload.message)) || response.statusText || 'API Error';
         throw new Error(errorMsg);
+    }
+
+    // Auto-invalidate server cache after create/no-content responses
+    if (response.status === 201 || response.status === 204) {
+        invalidateServerCache();
     }
 
     // If API wraps results under { data, items, results } return that array/object
@@ -48,21 +82,42 @@ export const api = {
     },
 
     // Users
-    getUsers: async () => handleResponse(await fetch(API_ENDPOINTS.users.index)),
-    createUser: async (data) => handleResponse(await fetch(API_ENDPOINTS.users.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })),
-    updateUser: async (id, data) => handleResponse(await fetch(API_ENDPOINTS.users.update(id), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })),
-    deleteUser: async (id) => handleResponse(await fetch(API_ENDPOINTS.users.delete(id), { method: 'DELETE' })),
-    getRoles: async () => handleResponse(await fetch(API_ENDPOINTS.users.roles)),
+    getUsers: async () => {
+        // Always fetch fresh user list — bypass cache with timestamp param
+        const url = `${API_ENDPOINTS.users.index}?_t=${Date.now()}`;
+        return handleResponse(await fetch(url));
+    },
+    createUser: async (data) => {
+        const res = await handleResponse(await fetch(API_ENDPOINTS.users.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }));
+        invalidateServerCache();
+        return res;
+    },
+    updateUser: async (id, data) => {
+        const res = await handleResponse(await fetch(API_ENDPOINTS.users.update(id), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }));
+        invalidateServerCache();
+        return res;
+    },
+    deleteUser: async (id) => {
+        const res = await handleResponse(await fetch(API_ENDPOINTS.users.delete(id), { method: 'DELETE' }));
+        invalidateServerCache();
+        return res;
+    },
+    getRoles: async () => cachedFetch(API_ENDPOINTS.users.roles, 60_000), // roles rarely change
 
-    // News
+    // News — 30s mem cache
     getNews: async (opts = {}) => {
-        // opts: { page, limit, search, category }
         const params = new URLSearchParams();
-        if (opts.page) params.set('page', opts.page);
-        if (opts.limit) params.set('limit', opts.limit);
-        if (opts.search) params.set('search', opts.search);
+        if (opts.page)     params.set('page', opts.page);
+        if (opts.limit)    params.set('limit', opts.limit);
+        if (opts.search)   params.set('search', opts.search);
         if (opts.category) params.set('category', opts.category);
-        const url = params.toString() ? `${API_ENDPOINTS.news.index}?${params.toString()}` : API_ENDPOINTS.news.index;
+        const url = params.toString()
+            ? `${API_ENDPOINTS.news.index}?${params.toString()}`
+            : API_ENDPOINTS.news.index;
+        // Only cache simple (no-filter) requests
+        if (!opts.search && !opts.page && !opts.limit && !opts.category) {
+            return cachedFetch(url, 30_000);
+        }
         const res = await fetch(url);
         const json = await res.json().catch(() => null);
         if (!res.ok) {
@@ -77,51 +132,80 @@ export const api = {
         if (!res.ok) throw new Error(json?.message || res.statusText || 'API Error');
         return json;
     },
-    createNews: async (data) => handleResponse(await fetch(API_ENDPOINTS.news.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })),
-    updateNews: async (id, data) => handleResponse(await fetch(API_ENDPOINTS.news.update(id), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })),
+    createNews: async (data) => {
+        const res = await handleResponse(await fetch(API_ENDPOINTS.news.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }));
+        invalidateServerCache();
+        return res;
+    },
+    updateNews: async (id, data) => {
+        const res = await handleResponse(await fetch(API_ENDPOINTS.news.update(id), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }));
+        invalidateServerCache();
+        return res;
+    },
     deleteNews: async (id, opts = {}) => {
         const suffix = opts.editor_username ? `?editor_username=${encodeURIComponent(opts.editor_username)}` : '';
-        return handleResponse(await fetch(`${API_ENDPOINTS.news.delete(id)}${suffix}`, { method: 'DELETE' }));
+        const res = await handleResponse(await fetch(`${API_ENDPOINTS.news.delete(id)}${suffix}`, { method: 'DELETE' }));
+        invalidateServerCache();
+        return res;
     },
     getComments: async (newsId) => handleResponse(await fetch(API_ENDPOINTS.news.comments(newsId))),
     addComment: async (newsId, data) => handleResponse(await fetch(API_ENDPOINTS.news.comments(newsId), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })),
 
+    // Decisions
+    getDecisions: async () => cachedFetch(API_ENDPOINTS.decisions.index, 60_000),
+
     // Documents
-    getDocuments: async () => handleResponse(await fetch(API_ENDPOINTS.documents.index)),
-    createDocument: async (data) => handleResponse(await fetch(API_ENDPOINTS.documents.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })),
-    updateDocument: async (id, data) => handleResponse(await fetch(API_ENDPOINTS.documents.update(id), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })),
-    deleteDocument: async (id) => handleResponse(await fetch(API_ENDPOINTS.documents.delete(id), { method: 'DELETE' })),
+    getDocuments: async () => cachedFetch(API_ENDPOINTS.documents.index, 60_000),
+    createDocument: async (data) => { const res = await handleResponse(await fetch(API_ENDPOINTS.documents.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })); invalidateServerCache(); return res; },
+    updateDocument: async (id, data) => { const res = await handleResponse(await fetch(API_ENDPOINTS.documents.update(id), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })); invalidateServerCache(); return res; },
+    deleteDocument: async (id) => { const res = await handleResponse(await fetch(API_ENDPOINTS.documents.delete(id), { method: 'DELETE' })); invalidateServerCache(); return res; },
 
     // Map Locations
     getMapLocations: async (opts = {}) => {
-        // opts: { all }
         const url = opts.all ? `${API_ENDPOINTS.map.index}?all=true` : API_ENDPOINTS.map.index;
-        return handleResponse(await fetch(url));
+        // Don't cache "all" requests (admin view)
+        if (opts.all) return handleResponse(await fetch(url));
+        return cachedFetch(url, 60_000);
     },
-    createMapLocation: async (data) => handleResponse(await fetch(API_ENDPOINTS.map.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })),
-    updateMapLocation: async (id, data) => handleResponse(await fetch(API_ENDPOINTS.map.update(id), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })),
-    deleteMapLocation: async (id) => handleResponse(await fetch(API_ENDPOINTS.map.delete(id), { method: 'DELETE' })),
+    createMapLocation: async (data) => { const res = await handleResponse(await fetch(API_ENDPOINTS.map.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })); invalidateServerCache(); return res; },
+    updateMapLocation: async (id, data) => { const res = await handleResponse(await fetch(API_ENDPOINTS.map.update(id), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })); invalidateServerCache(); return res; },
+    deleteMapLocation: async (id) => { const res = await handleResponse(await fetch(API_ENDPOINTS.map.delete(id), { method: 'DELETE' })); invalidateServerCache(); return res; },
 
-    // Statistics
-    getStatistics: async () => handleResponse(await fetch(API_ENDPOINTS.statistics.index)),
-    createStatistic: async (data) => handleResponse(await fetch(API_ENDPOINTS.statistics.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })),
-    updateStatistic: async (id, data) => handleResponse(await fetch(API_ENDPOINTS.statistics.update(id), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })),
-    deleteStatistic: async (id) => handleResponse(await fetch(API_ENDPOINTS.statistics.delete(id), { method: 'DELETE' })),
+    // Statistics — cached for 5 minutes (rarely changes)
+    getStatistics: async () => cachedFetch(API_ENDPOINTS.statistics.index, 300_000),
+    createStatistic: async (data) => { const res = await handleResponse(await fetch(API_ENDPOINTS.statistics.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })); invalidateServerCache(); return res; },
+    updateStatistic: async (id, data) => { const res = await handleResponse(await fetch(API_ENDPOINTS.statistics.update(id), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })); invalidateServerCache(); return res; },
+    deleteStatistic: async (id) => { const res = await handleResponse(await fetch(API_ENDPOINTS.statistics.delete(id), { method: 'DELETE' })); invalidateServerCache(); return res; },
 
     // Visitors
     getVisitorCount: async () => handleResponse(await fetch(API_ENDPOINTS.visitors.count)),
-    getVisitorStats: async () => handleResponse(await fetch(API_ENDPOINTS.visitors.stats)),
+    getVisitorStats: async () => cachedFetch(API_ENDPOINTS.visitors.stats, 60_000),
 
-    // Notifications
+    // Notifications — never cache (user-specific, real-time)
     getNotifications: async (roleId, userId) => {
         let url = API_ENDPOINTS.notifications.index + '?';
         if (roleId) url += `role_id=${roleId}&`;
         if (userId) url += `user_id=${userId}`;
         return handleResponse(await fetch(url));
     },
-    markNotificationRead: async (id) => handleResponse(await fetch(API_ENDPOINTS.notifications.markRead(id), { method: 'PUT' })),
-    markAllNotificationsRead: async () => handleResponse(await fetch(API_ENDPOINTS.notifications.markAllRead, { method: 'PUT' })),
-    clearAllNotifications: async () => handleResponse(await fetch(API_ENDPOINTS.notifications.clearAll, { method: 'DELETE' })),
+    markNotificationRead: async (id, userId) => {
+        const url = userId
+            ? `${API_ENDPOINTS.notifications.markRead(id)}?user_id=${userId}`
+            : API_ENDPOINTS.notifications.markRead(id);
+        return handleResponse(await fetch(url, { method: 'PATCH' }));
+    },
+    markAllNotificationsRead: async (roleId, userId) => {
+        let url = API_ENDPOINTS.notifications.markAllRead + '?';
+        if (roleId) url += `role_id=${roleId}&`;
+        if (userId) url += `user_id=${userId}`;
+        return handleResponse(await fetch(url, { method: 'PATCH' }));
+    },
+    clearAllNotifications: async (userId) => {
+        const url = userId
+            ? `${API_ENDPOINTS.notifications.clearAll}?user_id=${userId}`
+            : API_ENDPOINTS.notifications.clearAll;
+        return handleResponse(await fetch(url, { method: 'DELETE' }));
+    },
     getUnreadNotificationCount: async (roleId, userId) => {
         let url = API_ENDPOINTS.notifications.unreadCount + '?';
         if (roleId) url += `role_id=${roleId}&`;
@@ -138,50 +222,122 @@ export const api = {
     },
 
     // Decisions
-    getDecisions: async () => handleResponse(await fetch(API_ENDPOINTS.decisions.index)),
+    getDecisions: async () => cachedFetch(API_ENDPOINTS.decisions.index, 120_000),
 
-    // Pages
-    getPages: async () => handleResponse(await fetch(API_ENDPOINTS.pages.index)),
-    getPageById: async (id) => handleResponse(await fetch(API_ENDPOINTS.pages.byId(id))),
-    getPageAbout: async () => handleResponse(await fetch(API_ENDPOINTS.pages.about)),
-    getPageContact: async () => handleResponse(await fetch(API_ENDPOINTS.pages.contact)),
+    // Pages — cached for 2 minutes
+    getPages: async () => cachedFetch(API_ENDPOINTS.pages.index, 120_000),
+    getPageById: async (id) => cachedFetch(API_ENDPOINTS.pages.byId(id), 120_000),
+    getPageAbout: async () => cachedFetch(API_ENDPOINTS.pages.about, 120_000),
+    getPageContact: async () => cachedFetch(API_ENDPOINTS.pages.contact, 120_000),
     translatePage: async (id) => handleResponse(await fetch(API_ENDPOINTS.pages.translate(id), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
     })),
-    updatePage: async (id, data) => handleResponse(await fetch(API_ENDPOINTS.pages.byId(id), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })),
-    deletePage: async (id) => handleResponse(await fetch(API_ENDPOINTS.pages.byId(id), { method: 'DELETE' })),
-    togglePageVisibility: async (id, isVisible) => handleResponse(await fetch(`${API_ENDPOINTS.pages.byId(id)}/visibility`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_visible: isVisible }) })),
+    createPage: async (data) => { const res = await handleResponse(await fetch(API_ENDPOINTS.pages.index, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })); invalidateServerCache(); return res; },
+    updatePage: async (id, data) => { const res = await handleResponse(await fetch(API_ENDPOINTS.pages.byId(id), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })); invalidateServerCache(); return res; },
+    deletePage: async (id) => { const res = await handleResponse(await fetch(API_ENDPOINTS.pages.byId(id), { method: 'DELETE' })); invalidateServerCache(); return res; },
+    togglePageVisibility: async (id, isVisible) => { const res = await handleResponse(await fetch(`${API_ENDPOINTS.pages.byId(id)}/visibility`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_visible: isVisible }) })); invalidateServerCache(); return res; },
 
-    // Books
-    getBooks: async () => handleResponse(await fetch(API_ENDPOINTS.books.index)),
+    // Books — cached 5 minutes
+    getBooks: async () => cachedFetch(API_ENDPOINTS.books.index, 300_000),
 
     // Gallery
-    getGallery: async () => handleResponse(await fetch(API_ENDPOINTS.gallery.index)),
+    getGallery: async (page = 1, limit = 10, category = 'الكل') => {
+      const catParam = category && category !== 'الكل' ? `&category=${encodeURIComponent(category)}` : '';
+      const url = `${API_ENDPOINTS.gallery.index}?page=${page}&limit=${limit}${catParam}`;
+      return cachedFetch(url, 30_000);
+    },
     getGalleryAll: async () => handleResponse(await fetch(`${API_ENDPOINTS.gallery.index}/all`)),
-    createGallery: async (formData) => handleResponse(await fetch(API_ENDPOINTS.gallery.index, { method: 'POST', body: formData })),
-    updateGallery: async (id, formData) => handleResponse(await fetch(`${API_ENDPOINTS.gallery.index}/${id}`, { method: 'PUT', body: formData })),
-    toggleGallery: async (id) => handleResponse(await fetch(`${API_ENDPOINTS.gallery.index}/${id}/toggle`, { method: 'PATCH' })),
-    deleteGallery: async (id) => handleResponse(await fetch(`${API_ENDPOINTS.gallery.index}/${id}`, { method: 'DELETE' })),
+    getGalleryCategories: async () => cachedFetch(`${API_ENDPOINTS.gallery.index}/categories`, 120_000),
+    createGallery: async (formData) => { const res = await handleResponse(await fetch(API_ENDPOINTS.gallery.index, { method: 'POST', body: formData })); invalidateServerCache(); return res; },
+    updateGallery: async (id, formData) => { const res = await handleResponse(await fetch(`${API_ENDPOINTS.gallery.index}/${id}`, { method: 'PUT', body: formData })); invalidateServerCache(); return res; },
+    toggleGallery: async (id) => { const res = await handleResponse(await fetch(`${API_ENDPOINTS.gallery.index}/${id}/toggle`, { method: 'PATCH' })); invalidateServerCache(); return res; },
+    deleteGallery: async (id) => { const res = await handleResponse(await fetch(`${API_ENDPOINTS.gallery.index}/${id}`, { method: 'DELETE' })); invalidateServerCache(); return res; },
+    bulkDeleteGallery: async (ids) => { const res = await handleResponse(await fetch(`${API_ENDPOINTS.gallery.index}/bulk-delete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids }) })); invalidateServerCache(); return res; },
+    bulkUpdateGalleryCategory: async (ids, category) => { const res = await handleResponse(await fetch(`${API_ENDPOINTS.gallery.index}/bulk-update-category`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids, category }) })); invalidateServerCache(); return res; },
+    bulkUpdateGalleryVisibility: async (ids, is_visible) => { const res = await handleResponse(await fetch(`${API_ENDPOINTS.gallery.index}/bulk-update-visibility`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids, is_visible }) })); invalidateServerCache(); return res; },
 
-    // Working papers
-    getWorkingPapers: async () => handleResponse(await fetch(API_ENDPOINTS.working_papers.index)),
-    createWorkingPaper: async (data) => handleResponse(await fetch(API_ENDPOINTS.working_papers.index, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })),
-    updateWorkingPaper: async (id, data) => handleResponse(await fetch(`${API_ENDPOINTS.working_papers.index}/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })),
-    deleteWorkingPaper: async (id) => handleResponse(await fetch(`${API_ENDPOINTS.working_papers.index}/${id}`, { method: 'DELETE' })),
+    // Homepage Images — cached 5 minutes
+    getHomeImages: async () => cachedFetch(API_ENDPOINTS.homepage_images.index, 300_000),
+    createHomeImage: async (formData) => { const res = await handleResponse(await fetch(API_ENDPOINTS.homepage_images.index, { method: 'POST', body: formData })); invalidateServerCache(); return res; },
+    deleteHomeImage: async (id) => { const res = await handleResponse(await fetch(`${API_ENDPOINTS.homepage_images.index}/${id}`, { method: 'DELETE' })); invalidateServerCache(); return res; },
+
+    // Working papers — cached 2 minutes
+    getWorkingPapers: async () => cachedFetch(API_ENDPOINTS.working_papers.index, 120_000),
+    createWorkingPaper: async (data) => { const res = await handleResponse(await fetch(API_ENDPOINTS.working_papers.index, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })); invalidateServerCache(); return res; },
+    updateWorkingPaper: async (id, data) => { const res = await handleResponse(await fetch(`${API_ENDPOINTS.working_papers.index}/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })); invalidateServerCache(); return res; },
+    deleteWorkingPaper: async (id) => { const res = await handleResponse(await fetch(`${API_ENDPOINTS.working_papers.index}/${id}`, { method: 'DELETE' })); invalidateServerCache(); return res; },
 
     // Companies
     getCompanies: async () => handleResponse(await fetch(API_ENDPOINTS.companies.index)),
-    getCompaniesSummary: async () => handleResponse(await fetch(API_ENDPOINTS.companies.summary)),
-    createCompany: async (formData) => handleResponse(await fetch(API_ENDPOINTS.companies.index, { method: 'POST', body: formData })),
-    updateCompanyStatus: async (id, data) => handleResponse(await fetch(`${API_ENDPOINTS.companies.index}/${id}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })),
-    deleteCompany: async (id) => handleResponse(await fetch(`${API_ENDPOINTS.companies.index}/${id}`, { method: 'DELETE' })),
+    getCompaniesSummary: async () => cachedFetch(API_ENDPOINTS.companies.summary, 30_000),
+    createCompany: async (formData) => { const res = await handleResponse(await fetch(API_ENDPOINTS.companies.index, { method: 'POST', body: formData })); invalidateServerCache(); return res; },
+    updateCompanyStatus: async (id, data) => { const res = await handleResponse(await fetch(`${API_ENDPOINTS.companies.index}/${id}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })); invalidateServerCache(); return res; },
+    deleteCompany: async (id) => { const res = await handleResponse(await fetch(`${API_ENDPOINTS.companies.index}/${id}`, { method: 'DELETE' })); invalidateServerCache(); return res; },
 
     // KML
-    getKmlFeatures: async () => handleResponse(await fetch(API_ENDPOINTS.kml.features)),
-    uploadKml: async (formData, username) => handleResponse(await fetch(`${API_ENDPOINTS.kml.upload}?editor_username=${encodeURIComponent(username)}`, {
+    getKmlFeatures: async () => cachedFetch(API_ENDPOINTS.kml.features, 300_000),
+    uploadKml: async (formData, username) => {
+        const res = await handleResponse(await fetch(`${API_ENDPOINTS.kml.upload}?editor_username=${encodeURIComponent(username)}`, {
+            method: 'POST',
+            body: formData,
+        }));
+        invalidateServerCache();
+        return res;
+    },
+    clearKmlFeatures: async () => { const res = await handleResponse(await fetch(API_ENDPOINTS.kml.clear, { method: 'DELETE' })); invalidateServerCache(); return res; },
+    updateKmlFeatureColor: async (id, color) => handleResponse(await fetch(API_ENDPOINTS.kml.updateFeatureColor(id), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ color }) })),
+    updateKmlFolderColor: async (folder, color) => handleResponse(await fetch(API_ENDPOINTS.kml.updateFolderColor, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ folder, color }) })),
+
+    // Complaints
+    getComplaints: async () => handleResponse(await fetch(API_ENDPOINTS.complaints.index)),
+    createComplaint: async (data) => handleResponse(await fetch(API_ENDPOINTS.complaints.create, {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
     })),
-    clearKmlFeatures: async () => handleResponse(await fetch(API_ENDPOINTS.kml.clear, { method: 'DELETE' })),
+    updateComplaintStatus: async (id, data) => handleResponse(await fetch(API_ENDPOINTS.complaints.updateStatus(id), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })),
+    deleteComplaint: async (id) => handleResponse(await fetch(API_ENDPOINTS.complaints.delete(id), { method: 'DELETE' })),
+
+    // Experts
+    getExperts: async () => handleResponse(await fetch(API_ENDPOINTS.experts.index)),
+    createExpert: async (data) => handleResponse(await fetch(API_ENDPOINTS.experts.create, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })),
+    updateExpertStatus: async (id, data) => handleResponse(await fetch(API_ENDPOINTS.experts.updateStatus(id), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })),
+    deleteExpert: async (id) => handleResponse(await fetch(API_ENDPOINTS.experts.delete(id), { method: 'DELETE' })),
+
+    // Employee Requests
+    getEmployeeRequests: async () => handleResponse(await fetch(API_ENDPOINTS.employeeRequests.index)),
+    createEmployeeRequest: async (data) => handleResponse(await fetch(API_ENDPOINTS.employeeRequests.create, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })),
+    updateEmployeeRequestStatus: async (id, data) => handleResponse(await fetch(API_ENDPOINTS.employeeRequests.updateStatus(id), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })),
+    deleteEmployeeRequest: async (id) => handleResponse(await fetch(API_ENDPOINTS.employeeRequests.delete(id), { method: 'DELETE' })),
+
+    // Audit Log Trail & IP Blocking
+    getUserTrail: async (userId) => handleResponse(await fetch(`/api/audit-logs/user-trail/${userId}`)),
+    getBlockedIps: async () => handleResponse(await fetch('/api/blocked-ips')),
+    blockIp: async (ip_address, reason, blocked_by) => handleResponse(await fetch('/api/blocked-ips', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ip_address, reason, blocked_by })
+    })),
+    unblockIp: async (ip_address) => handleResponse(await fetch(`/api/blocked-ips/${encodeURIComponent(ip_address)}`, { method: 'DELETE' })),
 };

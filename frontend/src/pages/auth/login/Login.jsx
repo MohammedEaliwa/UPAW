@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   FaSignInAlt, FaLock, FaUser, FaEye, FaEyeSlash,
-  FaShieldAlt, FaArrowLeft, FaArrowRight
+  FaShieldAlt, FaArrowLeft, FaArrowRight, FaCheck
 } from 'react-icons/fa';
 import { useAuth } from '../../../context/AuthContext';
 import { useLanguage } from '../../../context/LanguageContext';
@@ -19,6 +19,7 @@ const Login = () => {
   const navigate = useNavigate();
 
   const [form, setForm] = useState({ username: '', password: '' });
+  const [rememberMe, setRememberMe] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -32,12 +33,36 @@ const Login = () => {
       setIdleNotice(true);
       sessionStorage.removeItem('upaw_logout_reason');
     }
+
+    // Only load saved credentials if "Remember Me" was checked previously
+    const isRemembered = localStorage.getItem('upa_remembered') === 'true';
+    if (isRemembered) {
+      const savedUser = localStorage.getItem('upa_saved_username') || '';
+      const savedPw = localStorage.getItem('upa_saved_password') || '';
+      setForm({ username: savedUser, password: savedPw });
+      setRememberMe(true);
+    } else {
+      setForm({ username: '', password: '' });
+      setRememberMe(false);
+    }
   }, [user, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
+
+    // Save or clear remembered credentials based on "Remember Me" checkbox
+    if (rememberMe) {
+      localStorage.setItem('upa_remembered', 'true');
+      localStorage.setItem('upa_saved_username', form.username.trim());
+      localStorage.setItem('upa_saved_password', form.password.trim());
+    } else {
+      localStorage.removeItem('upa_remembered');
+      localStorage.removeItem('upa_saved_username');
+      localStorage.removeItem('upa_saved_password');
+    }
+
     try {
       await login(form.username.trim(), form.password.trim());
       navigate('/dashboard');
@@ -136,7 +161,7 @@ const Login = () => {
                   </Alert>
                 )}
 
-                <form onSubmit={handleSubmit}>
+                <form onSubmit={handleSubmit} autoComplete="off">
                   <div className="mb-4">
                     <label style={{ fontWeight: 700, color: 'var(--text)', marginBottom: 8, fontSize: '0.9rem', display: 'block' }}>
                       {isRtl ? 'اسم المستخدم' : 'Username'}
@@ -145,6 +170,8 @@ const Login = () => {
                       <FaUser style={iconStyle} />
                       <input
                         type="text"
+                        name="username"
+                        autoComplete="off"
                         value={form.username}
                         onChange={(e) => setForm({ ...form, username: e.target.value })}
                         required
@@ -164,6 +191,8 @@ const Login = () => {
                       <FaLock style={iconStyle} />
                       <input
                         type={showPw ? 'text' : 'password'}
+                        name="password"
+                        autoComplete="new-password"
                         value={form.password}
                         onChange={(e) => setForm({ ...form, password: e.target.value })}
                         required
@@ -187,6 +216,34 @@ const Login = () => {
                         {showPw ? <FaEyeSlash /> : <FaEye />}
                       </button>
                     </div>
+                  </div>
+
+                  {/* "Remember Me" (تذكرني) Checkbox */}
+                  <div className="d-flex align-items-center justify-content-between mb-4">
+                    <label style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      cursor: 'pointer',
+                      fontSize: '0.88rem',
+                      fontWeight: 600,
+                      color: 'var(--text)',
+                      userSelect: 'none'
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
+                        style={{
+                          width: 18,
+                          height: 18,
+                          accentColor: '#0066cc',
+                          cursor: 'pointer',
+                          borderRadius: 4
+                        }}
+                      />
+                      <span>{isRtl ? 'تذكرني' : 'Remember Me'}</span>
+                    </label>
                   </div>
 
                   <motion.button

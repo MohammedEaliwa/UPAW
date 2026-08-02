@@ -40,8 +40,16 @@ const FloatingAppButton = ({ onClickOverride }) => {
     };
   }, []);
 
-  // Hide the button completely when on the app-development page
-  if (location.pathname === '/app-development') return null;
+  // Hide the button completely when on app-development, dashboard, login or register routes
+  const path = location.pathname;
+  if (
+    path === '/app-development' ||
+    path.startsWith('/dashboard') ||
+    path === '/login' ||
+    path === '/register'
+  ) {
+    return null;
+  }
 
   const handleClick = (e) => {
     e.preventDefault();

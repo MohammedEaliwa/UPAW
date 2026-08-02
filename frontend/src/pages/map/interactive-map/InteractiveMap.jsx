@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { FaSearch, FaMapMarkedAlt, FaFilter, FaMapMarkerAlt } from 'react-icons/fa';
 import L from 'leaflet';
 import { useLanguage } from '../../../context/LanguageContext';
+import { autoTranslateText } from '../../../context/LanguageContext';
 import { api } from '../../../services/api';
 import 'leaflet/dist/leaflet.css';
 import './interactive-map.css';
@@ -107,7 +108,11 @@ const createModernMarkerIcon = (color = '#003087') => {
 };
 
 const InteractiveMap = () => {
-  const { locale, t } = useLanguage();
+  const { locale, t, autoTranslateText: tx } = useLanguage();
+  const isEn = locale === 'en';
+  const isRtl = !isEn;
+  // Helper: translate Arabic text to English using auto-mapper
+  const txLabel = (text) => isEn ? autoTranslateText(text, 'en') : text;
   const [locations, setLocations] = useState([]);
   const [kmlFeatures, setKmlFeatures] = useState([]);
   const [kmlFolders, setKmlFolders] = useState([]); 
@@ -146,8 +151,6 @@ const InteractiveMap = () => {
       }).catch(() => {})
     ]).finally(() => setLoading(false));
   }, []);
-
-  const isRtl = locale === 'ar';
 
   const categories = [
     { value: 'الكل', label: isRtl ? 'الكل' : 'All' },
@@ -256,7 +259,7 @@ const InteractiveMap = () => {
                             background: KML_LAYER_COLORS[idx % KML_LAYER_COLORS.length],
                             display: 'inline-block', flexShrink: 0
                           }} />
-                          {isRtl ? folder : (KML_FOLDER_MAP_EN[folder] || folder)} <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>(KML)</span>
+                          {isRtl ? folder : (KML_FOLDER_MAP_EN[folder] || autoTranslateText(folder, 'en') || folder)} <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>(KML)</span>
                         </span>
                       }
                       checked={!hiddenFolders.has(folder)}
@@ -462,7 +465,7 @@ const InteractiveMap = () => {
                       >
                         <Popup autoPan={true} autoPanPadding={[40, 40]}>
                           <div style={{ fontFamily: 'inherit', direction: 'rtl', textAlign: 'right', minWidth: 180 }}>
-                            <Badge className="mb-2" style={{ backgroundColor: color }}>{feat.folder}</Badge>
+                            <Badge className="mb-2" style={{ backgroundColor: color }}>{isEn ? (KML_FOLDER_MAP_EN[feat.folder] || autoTranslateText(feat.folder, 'en') || feat.folder) : feat.folder}</Badge>
                             <h6 className="fw-bold mb-1" style={{ color: 'var(--primary)', fontSize: '0.9rem' }}>{feat.name || 'نقطة KML'}</h6>
                             {feat.details ? (
                               <div dangerouslySetInnerHTML={{ __html: feat.details }} style={{ fontSize: '0.82rem', lineHeight: 1.4 }} />
@@ -498,7 +501,7 @@ const InteractiveMap = () => {
                       >
                         <Popup autoPan={true} autoPanPadding={[40, 40]}>
                           <div style={{ fontFamily: 'inherit', direction: 'rtl', textAlign: 'right', maxWidth: 300, maxHeight: 250, overflow: 'auto' }}>
-                            <Badge className="mb-2" style={{ backgroundColor: color }}>{feat.folder}</Badge>
+                            <Badge className="mb-2" style={{ backgroundColor: color }}>{isEn ? (KML_FOLDER_MAP_EN[feat.folder] || autoTranslateText(feat.folder, 'en') || feat.folder) : feat.folder}</Badge>
                             <h6 className="fw-bold mb-2">{feat.name || 'نطاق جغرافي'}</h6>
                             {feat.details ? (
                               <div dangerouslySetInnerHTML={{ __html: feat.details }} className="kml-popup-details" style={{ fontSize: '0.8rem', lineHeight: 1.4 }} />

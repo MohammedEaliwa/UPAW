@@ -4,6 +4,7 @@ import { useParams, Link, useNavigate, Navigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import * as FaIcons from 'react-icons/fa';
 import { useLanguage } from '../../../context/LanguageContext';
+import { autoTranslateText } from '../../../context/LanguageContext';
 import { api } from '../../../services/api';
 import './dynamic-page.css';
 import DataTable from '../../../components/DataTable';
@@ -89,9 +90,12 @@ async function translatePageOnDemand(pageId) {
 
 const DynamicPage = () => {
   const { id } = useParams();
-  const { locale } = useLanguage();
+  const { locale, t } = useLanguage();
   const isEn = locale === 'en';
   const isRtl = !isEn;
+
+  // Helper: auto-translate Arabic text to English when in EN mode
+  const tx = (text) => isEn ? autoTranslateText(text, 'en') : text;
   const navigate = useNavigate();
   const contentRef = useRef(null);
   const carouselRef = useRef(null);
@@ -128,10 +132,16 @@ const DynamicPage = () => {
       if (isReportsPage) {
         api.getWorkingPapers().then(rows => {
           if (cancelled) return;
-          const normalized = (rows || []).map(r => ({
+            const normalized = (rows || []).map(r => ({
             id: r.id,
-            title: isRtl ? r.title_ar || r.title_en : r.title_en || r.title_ar,
-            category: r.category || r.section || '',
+            title: isEn
+              ? (r.title_en && r.title_en.trim() && r.title_en !== r.title_ar
+                  ? r.title_en
+                  : autoTranslateText(r.title_ar || r.title_en || '', 'en'))
+              : (r.title_ar || r.title_en || ''),
+            category: isEn
+              ? autoTranslateText(r.category || r.section || '', 'en')
+              : (r.category || r.section || ''),
             date: r.date || r.published_at || '',
             file: r.file_url || r.file || '',
           }));

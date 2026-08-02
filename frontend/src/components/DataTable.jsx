@@ -11,25 +11,6 @@ const LIMIT_OPTIONS = [5, 10, 15, 25, 50, 100];
 
 /**
  * DataTable – Reusable premium data table component
- *
- * Props:
- *  columns       : [ { key, label, sortable?, style?, render?(value, row) } ]
- *  data          : array of row objects
- *  total         : total record count (from API)
- *  page          : current page number (1-indexed)
- *  limit         : rows per page
- *  totalPages    : total pages
- *  loading       : boolean
- *  onPageChange  : (page) => void
- *  onLimitChange : (limit) => void
- *  onSearch      : (query) => void   (debounced 400ms)
- *  onSortChange  : ({ key, dir }) => void  (optional)
- *  searchPlaceholder : string
- *  statsCards    : [ { label, value, icon, color } ]
- *  filters       : JSX – extra filter controls rendered in toolbar
- *  onExport      : () => void  (if provided, Export button shown)
- *  emptyIcon     : JSX
- *  emptyText     : string
  */
 const DataTable = ({
   columns = [],
@@ -43,12 +24,12 @@ const DataTable = ({
   onLimitChange,
   onSearch,
   onSortChange,
-  searchPlaceholder = 'بحث...',
+  searchPlaceholder,
   statsCards = [],
   filters,
   onExport,
   emptyIcon,
-  emptyText = 'لا توجد بيانات',
+  emptyText,
   rtl = false,
   plain = false,
 }) => {
@@ -58,6 +39,8 @@ const DataTable = ({
   const [showLimitMenu, setShowLimitMenu] = useState(false);
   const limitRef = useRef(null);
   const searchTimeout = useRef(null);
+
+  const isEn = !rtl;
 
   // Close limit menu on outside click
   useEffect(() => {
@@ -89,12 +72,10 @@ const DataTable = ({
 
   const startRecord = total === 0 ? 0 : (page - 1) * limit + 1;
   const endRecord = Math.min(page * limit, total);
-  // Compute effective total pages (derive from total/limit if totalPages not provided)
   const effectiveTotalPages = (totalPages && totalPages > 0)
     ? totalPages
     : Math.max(1, Math.ceil((total || 0) / (limit || 1)));
 
-  // Compute visible page numbers (max 5)
   const getPageNumbers = () => {
     if (effectiveTotalPages <= 5) return Array.from({ length: effectiveTotalPages }, (_, i) => i + 1);
     if (page <= 3) return [1, 2, 3, 4, 5];
@@ -102,10 +83,8 @@ const DataTable = ({
     return [page - 2, page - 1, page, page + 1, page + 2];
   };
 
-  // Return page numbers array (ascending)
-  const getDisplayPageNumbers = () => {
-    return getPageNumbers();
-  };
+  const defaultSearchPlaceholder = isEn ? 'Search...' : 'بحث...';
+  const defaultEmptyText = isEn ? 'No data available' : 'لا توجد بيانات';
 
   return (
     <div className="dt-root" dir={rtl ? 'rtl' : 'ltr'}>
@@ -141,7 +120,7 @@ const DataTable = ({
 
           {/* Limit Selector */}
           <div className="dt-limit-wrap" ref={limitRef}>
-            <span className="dt-limit-label">عرض</span>
+            <span className="dt-limit-label">{isEn ? 'Show' : 'عرض'}</span>
             <button
               className="dt-limit-btn"
               onClick={() => setShowLimitMenu(v => !v)}
@@ -156,7 +135,7 @@ const DataTable = ({
                 <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" />
               </svg>
             </button>
-            <span className="dt-limit-label">سجل</span>
+            <span className="dt-limit-label">{isEn ? 'entries' : 'سجل'}</span>
 
             <AnimatePresence>
               {showLimitMenu && (
@@ -187,12 +166,12 @@ const DataTable = ({
             </AnimatePresence>
           </div>
 
-          {/* Center Controls: Export on left, Filters on right in RTL */}
+          {/* Center Controls: Export & Filters */}
           <div className="dt-toolbar-center">
             {onExport && (
-              <button className="dt-export-btn" onClick={onExport} title="تصدير البيانات">
+              <button className="dt-export-btn" onClick={onExport} title={isEn ? "Export Data" : "تصدير البيانات"}>
                 <FaFileDownload size={13} />
-                <span>تصدير</span>
+                <span>{isEn ? "Export" : "تصدير"}</span>
               </button>
             )}
             {filters}
@@ -205,7 +184,8 @@ const DataTable = ({
               id="dt-search-input"
               type="text"
               className="dt-search-input"
-              placeholder={searchPlaceholder}
+              style={{ textAlign: rtl ? 'right' : 'left' }}
+              placeholder={searchPlaceholder || defaultSearchPlaceholder}
               value={searchValue}
               onChange={handleSearch}
               autoComplete="off"
@@ -214,7 +194,7 @@ const DataTable = ({
               <button
                 className="dt-search-clear"
                 onClick={() => { setSearchValue(''); if (onSearch) onSearch(''); }}
-                aria-label="مسح البحث"
+                aria-label={isEn ? "Clear search" : "مسح البحث"}
               >
                 ×
               </button>
@@ -230,10 +210,10 @@ const DataTable = ({
               <div className="dt-loading-spinner">
                 <Spinner animation="border" style={{ color: 'var(--primary)' }} />
               </div>
-              <p className="dt-loading-text">جاري التحميل...</p>
+              <p className="dt-loading-text">{isEn ? 'Loading...' : 'جاري التحميل...'}</p>
             </div>
           ) : (
-            <table className="dt-table" aria-label="جدول البيانات">
+            <table className="dt-table" aria-label="Data Table" style={{ direction: rtl ? 'rtl' : 'ltr' }}>
               <thead>
                 <tr>
                   {columns.map(col => (
@@ -241,14 +221,14 @@ const DataTable = ({
                       key={col.key}
                       className={col.sortable ? 'sortable' : ''}
                       onClick={() => col.sortable && handleSort(col.key)}
-                      style={col.headStyle || col.style || {}}
+                      style={{ textAlign: rtl ? 'right' : 'left', ...(col.headStyle || col.style || {}) }}
                       aria-sort={
                         col.sortable && sortKey === col.key
                           ? sortDir === 'asc' ? 'ascending' : 'descending'
                           : undefined
                       }
                     >
-                      <div className="dt-th-inner">
+                      <div className="dt-th-inner" style={{ justifyContent: rtl ? 'flex-start' : 'flex-start' }}>
                         <span>{col.label}</span>
                         {col.sortable && (
                           <span className="dt-sort-icon" aria-hidden="true">
@@ -267,7 +247,7 @@ const DataTable = ({
                   <tr>
                     <td colSpan={columns.length} className="dt-empty-cell">
                       {emptyIcon && <div className="dt-empty-icon">{emptyIcon}</div>}
-                      <p className="dt-empty-text">{emptyText}</p>
+                      <p className="dt-empty-text">{emptyText || defaultEmptyText}</p>
                     </td>
                   </tr>
                 ) : (
@@ -282,7 +262,7 @@ const DataTable = ({
                       {columns.map(col => (
                         <td
                           key={col.key}
-                          style={col.style || {}}
+                          style={{ textAlign: rtl ? 'right' : 'left', ...(col.style || {}) }}
                           data-label={col.label}
                         >
                           {col.render ? col.render(row[col.key], row, i) : (row[col.key] ?? '—')}
@@ -296,40 +276,41 @@ const DataTable = ({
           )}
         </div>{/* /scroll */}
 
-        {/* Footer: Pagination on FAR LEFT, Info on FAR RIGHT */}
-        <div className="dt-footer" style={{ display: 'flex', flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
+        {/* Footer */}
+        <div className="dt-footer" style={{ display: 'flex', flexDirection: rtl ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <div className="dt-footer-info">
             {total > 0
-              ? <>عرض <strong>{startRecord}</strong> – <strong>{endRecord}</strong> من أصل <strong>{total}</strong> سجل</>
-              : 'لا توجد نتائج'}
+              ? (isEn
+                  ? <>Showing <strong>{startRecord}</strong> – <strong>{endRecord}</strong> of <strong>{total}</strong> entries</>
+                  : <>عرض <strong>{startRecord}</strong> – <strong>{endRecord}</strong> من أصل <strong>{total}</strong> سجل</>
+                )
+              : (isEn ? 'No entries found' : 'لا توجد نتائج')}
           </div>
 
           {effectiveTotalPages > 1 && (
-            <nav className="dt-pagination" aria-label="التنقل بين الصفحات">
-              {/* Last Page (Far Left - Enabled on page 1) */}
+            <nav className="dt-pagination" aria-label="Pagination">
+              {/* First Page */}
               <button
                 className="dt-pg-btn"
-                onClick={() => onPageChange && onPageChange(effectiveTotalPages)}
-                disabled={page >= effectiveTotalPages}
-                title="الصفحة الأخيرة"
-                aria-label="الصفحة الأخيرة"
+                onClick={() => onPageChange && onPageChange(1)}
+                disabled={page <= 1}
+                title={isEn ? "First Page" : "الصفحة الأولى"}
               >
-                <FaAngleDoubleLeft size={12} />
+                {rtl ? <FaAngleDoubleRight size={12} /> : <FaAngleDoubleLeft size={12} />}
               </button>
 
-              {/* Next Page (Left Arrow: moves to page + 1, ENABLED on page 1) */}
+              {/* Prev Page */}
               <button
                 className="dt-pg-btn"
-                onClick={() => onPageChange && onPageChange(page + 1)}
-                disabled={page >= effectiveTotalPages}
-                title="التالية"
-                aria-label="الصفحة التالية"
+                onClick={() => onPageChange && onPageChange(page - 1)}
+                disabled={page <= 1}
+                title={isEn ? "Previous" : "السابقة"}
               >
-                <FaChevronLeft size={11} />
+                {rtl ? <FaChevronRight size={11} /> : <FaChevronLeft size={11} />}
               </button>
 
-              {/* Page numbers reversed: 2 1 */}
-              {getPageNumbers().slice().reverse().map(p => (
+              {/* Page numbers */}
+              {getPageNumbers().map(p => (
                 <button
                   key={p}
                   className={`dt-pg-btn ${p === page ? 'active' : ''}`}
@@ -340,26 +321,24 @@ const DataTable = ({
                 </button>
               ))}
 
-              {/* Prev Page (Right Arrow: moves to page - 1, DISABLED on page 1) */}
+              {/* Next Page */}
               <button
                 className="dt-pg-btn"
-                onClick={() => onPageChange && onPageChange(page - 1)}
-                disabled={page <= 1}
-                title="السابقة"
-                aria-label="الصفحة السابقة"
+                onClick={() => onPageChange && onPageChange(page + 1)}
+                disabled={page >= effectiveTotalPages}
+                title={isEn ? "Next" : "التالية"}
               >
-                <FaChevronRight size={11} />
+                {rtl ? <FaChevronLeft size={11} /> : <FaChevronRight size={11} />}
               </button>
 
-              {/* First Page (Far Right Arrow: DISABLED on page 1) */}
+              {/* Last Page */}
               <button
                 className="dt-pg-btn"
-                onClick={() => onPageChange && onPageChange(1)}
-                disabled={page <= 1}
-                title="الصفحة الأولى"
-                aria-label="الصفحة الأولى"
+                onClick={() => onPageChange && onPageChange(effectiveTotalPages)}
+                disabled={page >= effectiveTotalPages}
+                title={isEn ? "Last Page" : "الصفحة الأخيرة"}
               >
-                <FaAngleDoubleRight size={12} />
+                {rtl ? <FaAngleDoubleLeft size={12} /> : <FaAngleDoubleRight size={12} />}
               </button>
             </nav>
           )}
@@ -441,7 +420,6 @@ const DataTable = ({
           overflow: hidden;
         }
 
-        /* Plain mode: remove card styling so table can span full width */
         .dt-card.dt-card-plain {
           background: transparent;
           border-radius: 0;
@@ -495,7 +473,6 @@ const DataTable = ({
         .dt-limit-menu {
           position: absolute;
           top: calc(100% + 6px);
-          right: 24px;
           background: var(--card-bg, #fff);
           border: 1.5px solid rgba(0,48,135,0.15);
           border-radius: 14px;
@@ -562,7 +539,6 @@ const DataTable = ({
           font-size: 0.84rem;
           width: 100%;
           color: var(--text, #333);
-          text-align: right;
         }
 
         .dt-search-input::placeholder { color: #bbb; }
@@ -590,7 +566,6 @@ const DataTable = ({
 
         .dt-table {
           width: 100%; border-collapse: collapse;
-          direction: rtl;
         }
 
         .dt-table thead tr {
@@ -602,7 +577,6 @@ const DataTable = ({
           padding: 13px 16px;
           font-size: 0.78rem; font-weight: 700;
           color: var(--text-muted, #556080) !important;
-          text-align: right;
           white-space: nowrap;
           letter-spacing: 0.5px;
           text-transform: uppercase;
@@ -622,7 +596,6 @@ const DataTable = ({
           color: var(--text, #1a2035) !important;
           border-bottom: 1px solid rgba(0,0,0,0.038);
           vertical-align: middle;
-          text-align: right;
         }
 
         .dt-row:last-child td { border-bottom: none; }
@@ -664,7 +637,7 @@ const DataTable = ({
           width: 34px; height: 34px;
           display: flex; align-items: center; justify-content: center;
           border: 1.5px solid rgba(0,0,0,0.1);
-          border-radius: 9px;
+          border-radius: 99px;
           background: transparent;
           color: var(--text, #555);
           font-size: 0.82rem; font-weight: 600;

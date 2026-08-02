@@ -23,7 +23,6 @@ class CachePublicApiResponse
     /** Paths that should NEVER be cached */
     private const SKIP_PATHS = [
         'api/visitors/count',   // tracks unique visitors per request
-        'api/notifications',    // user-specific
         'api/login',
         'api/register',
         'api/audit-logs',

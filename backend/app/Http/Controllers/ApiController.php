@@ -913,6 +913,37 @@ class ApiController extends Controller
         return response()->json(['success' => true]);
     }
 
+    public function deleteKmlFolder(Request $request)
+    {
+        $folder = $request->input('folder') ?? $request->query('folder');
+        if ($folder) {
+            DB::table('map_kml_features')->where('folder', $folder)->delete();
+        }
+        return response()->json(['success' => true]);
+    }
+
+    public function deleteKmlFeature($id)
+    {
+        DB::table('map_kml_features')->where('id', $id)->delete();
+        return response()->json(['success' => true]);
+    }
+
+    public function renameKmlFolder(Request $request)
+    {
+        $oldFolder = $request->input('old_folder');
+        $newFolder = trim($request->input('new_folder'));
+
+        if (!$oldFolder || !$newFolder) {
+            return response()->json(['error' => 'الرجاء إدخال الاسم القديم والجديد للملف'], 400);
+        }
+
+        $updated = DB::table('map_kml_features')
+            ->where('folder', $oldFolder)
+            ->update(['folder' => $newFolder]);
+
+        return response()->json(['success' => true, 'updated' => $updated]);
+    }
+
     public function uploadKml(Request $request)
     {
         if (!$request->hasFile('file')) {
@@ -1873,5 +1904,121 @@ class ApiController extends Controller
         DB::table('employee_requests')->where('id', $id)->delete();
         return response()->json(['success' => true]);
     }
+
+    // ─── Directors ────────────────────────────────────────────────────────────
+
+    /** GET /directors  — returns all, optionally filtered by ?role=president|office|administration */
+    public function getDirectors(Request $request)
+    {
+        $query = DB::table('directors')->orderBy('role')->orderBy('order_index');
+        if ($request->has('role')) {
+            $query->where('role', $request->input('role'));
+        }
+        $rows = $query->get()->map(function ($d) {
+            $d = (array) $d;
+            $d['img'] = $this->normalizeUrl($d['img'] ?? '');
+            return $d;
+        });
+        return response()->json($rows);
+    }
+
+    /** POST /directors  — create a new director (multipart/form-data with optional image) */
+    public function createDirector(Request $request)
+    {
+        $img = '';
+        if ($request->hasFile('img')) {
+            $filename = $this->compressImage($request->file('img'));
+            $img = $this->uploadsUrl($filename);
+        } elseif ($request->filled('img')) {
+            $img = $request->input('img');
+        }
+
+        $id = DB::table('directors')->insertGetId([
+            'role'        => $request->input('role', 'office'),
+            'title_ar'    => $request->input('title_ar', ''),
+            'title_en'    => $request->input('title_en', ''),
+            'name_ar'     => $request->input('name_ar', ''),
+            'name_en'     => $request->input('name_en', ''),
+            'img'         => $img,
+            'order_index' => (int) $request->input('order_index', 0),
+            'created_at'  => now(),
+            'updated_at'  => now(),
+        ]);
+
+        $created = DB::table('directors')->where('id', $id)->first();
+        return response()->json($created, 201);
+    }
+
+    /** PUT /directors/{id}  — update director fields and optionally new photo */
+    public function updateDirector(Request $request, $id)
+    {
+        $director = DB::table('directors')->where('id', $id)->first();
+        if (!$director) {
+            return response()->json(['error' => 'Director not found'], 404);
+        }
+
+        $data = [
+            'role'        => $request->input('role', $director->role),
+            // Preserve existing title if empty string sent — titles are set at creation
+            'title_ar'    => ($request->has('title_ar') && $request->input('title_ar') !== '')
+                                ? $request->input('title_ar')
+                                : $director->title_ar,
+            'title_en'    => ($request->has('title_en') && $request->input('title_en') !== '')
+                                ? $request->input('title_en')
+                                : $director->title_en,
+            // name fields CAN be empty (not yet assigned)
+            'name_ar'     => $request->has('name_ar') ? $request->input('name_ar') : $director->name_ar,
+            'name_en'     => $request->has('name_en') ? $request->input('name_en') : $director->name_en,
+            'order_index' => (int) $request->input('order_index', $director->order_index),
+            'updated_at'  => now(),
+        ];
+
+        if ($request->hasFile('img')) {
+            $filename   = $this->compressImage($request->file('img'));
+            $data['img'] = $this->uploadsUrl($filename);
+        } elseif ($request->has('img')) {
+            $data['img'] = $request->input('img', $director->img);
+        }
+
+        DB::table('directors')->where('id', $id)->update($data);
+        $updated = DB::table('directors')->where('id', $id)->first();
+        $updated = (array) $updated;
+        $updated['img'] = $this->normalizeUrl($updated['img'] ?? '');
+        return response()->json($updated);
+    }
+
+    /** DELETE /directors/{id} */
+    public function deleteDirector($id)
+    {
+        DB::table('directors')->where('id', $id)->delete();
+        return response()->json(['success' => true]);
+    }
+
+    /** POST /app-subscriptions — Store user subscription for Balegh mobile app early access */
+    public function subscribeToApp(Request $request)
+    {
+        $contact = trim((string) $request->input('contact'));
+        if (!$contact) {
+            return response()->json(['error' => 'Contact field is required'], 422);
+        }
+
+        $locale    = $request->input('locale', 'ar');
+        $ipAddress = $request->ip();
+
+        $id = DB::table('app_subscriptions')->insertGetId([
+            'contact'    => $contact,
+            'locale'     => $locale,
+            'app_name'   => 'Balegh',
+            'ip_address' => $ipAddress,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return response()->json([
+            'message' => 'Subscribed successfully',
+            'id'      => $id
+        ]);
+    }
 }
+
 

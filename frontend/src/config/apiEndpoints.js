@@ -82,6 +82,8 @@ export const API_ENDPOINTS = {
         clear: `${BASE_URL}/kml/features/clear`,
         updateFeatureColor: (id) => `${BASE_URL}/kml/features/${id}/color`,
         updateFolderColor: `${BASE_URL}/kml/folders/color`,
+        renameFolder: `${BASE_URL}/kml/folders/rename`,
+        deleteFolder: `${BASE_URL}/kml/folders`,
     },
     complaints: {
         index: `${BASE_URL}/complaints`,
@@ -102,4 +104,9 @@ export const API_ENDPOINTS = {
         delete: (id) => `${BASE_URL}/employee-requests/${id}`,
     },
     translateAll: `${BASE_URL}/translate-all`,
+    directors: {
+        index:  `${BASE_URL}/directors`,
+        byId:   (id) => `${BASE_URL}/directors/${id}`,
+    },
+    appSubscriptions: `${BASE_URL}/app-subscriptions`,
 };

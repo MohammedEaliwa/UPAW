@@ -18,6 +18,7 @@ const Gallery             = lazy(() => import('../pages/public/gallery/Gallery')
 const Library             = lazy(() => import('../pages/public/library/Library'));
 const ExpertsRegistration = lazy(() => import('../pages/public/experts-registration/ExpertsRegistration'));
 const DecisionsPage       = lazy(() => import('../pages/papers/decisions/DecisionsPage'));
+const AppDevelopment      = lazy(() => import('../pages/public/app-development/AppDevelopment'));
 
 // Lazy-loaded dashboard pages
 const DashboardLayout   = lazy(() => import('../layouts/DashboardLayout'));
@@ -41,6 +42,7 @@ const AuditLogs         = lazy(() => import('../pages/dashboard/audit/AuditLogs'
 
 import PublicLayout  from '../layouts/PublicLayout';
 import DashboardGuard from './DashboardGuard';
+import FloatingAppButton from '../components/FloatingAppButton';
 
 // Simple loading fallback - minimal to avoid flicker
 const PageLoader = () => (
@@ -75,6 +77,7 @@ const AppRoutes = () => {
         <Route path="/gallery" element={<PublicLayout><Gallery /></PublicLayout>} />
         <Route path="/library" element={<PublicLayout><Library /></PublicLayout>} />
         <Route path="/decisions" element={<PublicLayout><DecisionsPage /></PublicLayout>} />
+        <Route path="/app-development" element={<AppDevelopment />} />
 
         {/* Dashboard Routes */}
         <Route path="/dashboard" element={<DashboardGuard><DashboardLayout /></DashboardGuard>}>
@@ -97,6 +100,8 @@ const AppRoutes = () => {
           <Route path="audit-logs" element={<AuditLogs />} />
         </Route>
       </Routes>
+      {/* Global Floating App Button – appears across all pages */}
+      <FloatingAppButton />
     </Suspense>
   );
 };

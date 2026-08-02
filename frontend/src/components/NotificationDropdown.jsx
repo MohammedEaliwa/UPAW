@@ -52,6 +52,7 @@ const NotificationDropdown = () => {
 
   /* Fetch unread count only (lightweight polling) */
   const fetchCount = useCallback(async () => {
+    if (typeof document !== 'undefined' && document.hidden) return;
     try {
       const data = await api.getUnreadNotificationCount(roleId, userId);
       setUnreadCount(data?.count || 0);

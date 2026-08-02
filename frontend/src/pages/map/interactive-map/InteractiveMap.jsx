@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Container, Row, Col, Form, Badge, ListGroup } from 'react-bootstrap';
-import { MapContainer, TileLayer, Marker, Popup, Polygon, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polygon, useMap, useMapEvents } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import { motion } from 'framer-motion';
 import { FaSearch, FaMapMarkedAlt, FaFilter, FaMapMarkerAlt } from 'react-icons/fa';
@@ -21,27 +21,57 @@ let DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
-const kmlIcon = L.icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-});
-
-// Map controller to animate flying to target coordinates only on explicit user clicks
-const MapController = ({ targetCoords }) => {
+// Map controller to center clicked point with moderate zoom (11) and reset to default view on popup close
+const MapController = ({ targetCoords, defaultCenter = [27.0, 17.5], defaultZoom = 5, onResetView }) => {
   const map = useMap();
   const prevTriggerId = useRef(null);
+  const isPointActiveRef = useRef(false);
 
   useEffect(() => {
     if (targetCoords && targetCoords.id && targetCoords.id !== prevTriggerId.current) {
       prevTriggerId.current = targetCoords.id;
-      map.flyTo([targetCoords.lat, targetCoords.lng], targetCoords.zoom || 14, { duration: 1.2 });
+      isPointActiveRef.current = true;
+      const zoomLevel = targetCoords.zoom || 11; // Moderate zoom-in (less tight)
+      map.flyTo([targetCoords.lat, targetCoords.lng], zoomLevel, { duration: 1.0 });
     }
   }, [targetCoords, map]);
 
+  useMapEvents({
+    popupclose: () => {
+      // When popup is closed, check if no popups remain open, then fly back to default map center and zoom
+      setTimeout(() => {
+        if (!document.querySelector('.leaflet-popup')) {
+          if (isPointActiveRef.current) {
+            isPointActiveRef.current = false;
+            prevTriggerId.current = null;
+            map.flyTo(defaultCenter, defaultZoom, { duration: 1.0 });
+            if (onResetView) onResetView();
+          }
+        }
+      }, 60);
+    }
+  });
+
   return null;
+};
+
+// Helper to compute centroid of multi-coordinate polygons/lines
+const getFeatureCenter = (coords) => {
+  if (!Array.isArray(coords) || coords.length === 0) return null;
+  let points = coords;
+  if (Array.isArray(coords[0]) && Array.isArray(coords[0][0])) {
+    points = coords[0];
+  }
+  let sumLat = 0, sumLng = 0, count = 0;
+  for (const pt of points) {
+    if (Array.isArray(pt) && pt.length >= 2 && !isNaN(pt[0]) && !isNaN(pt[1])) {
+      sumLat += pt[0];
+      sumLng += pt[1];
+      count++;
+    }
+  }
+  if (count === 0) return null;
+  return [sumLat / count, sumLng / count];
 };
 
 // Palette of colors for KML layers
@@ -57,6 +87,25 @@ const KML_FOLDER_MAP_EN = {
   'الحدود': 'Boundaries',
 };
 
+// Sleek modern micro-marker icon creator
+const createModernMarkerIcon = (color = '#003087') => {
+  return L.divIcon({
+    className: 'modern-leaflet-marker',
+    html: `
+      <div class="marker-pin-inner" style="width:22px;height:28px;position:relative;cursor:pointer;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 3px 6px rgba(0,0,0,0.32));">
+        <svg width="22" height="28" viewBox="0 0 22 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M11 0C4.925 0 0 4.925 0 11C0 19.25 11 28 11 28C11 28 22 19.25 22 11C22 4.925 17.075 0 11 0Z" fill="${color}"/>
+          <circle cx="11" cy="10.5" r="5" fill="#FFFFFF" opacity="0.96"/>
+          <circle cx="11" cy="10.5" r="3" fill="${color}"/>
+        </svg>
+      </div>
+    `,
+    iconSize: [22, 28],
+    iconAnchor: [11, 28],
+    popupAnchor: [0, -25],
+  });
+};
+
 const InteractiveMap = () => {
   const { locale, t } = useLanguage();
   const [locations, setLocations] = useState([]);
@@ -67,7 +116,8 @@ const InteractiveMap = () => {
   const [selectedCat, setSelectedCat] = useState('الكل');
   const [activeLocation, setActiveLocation] = useState(null);
   const [flyTarget, setFlyTarget] = useState(null);
-  const [mapCenter, setMapCenter] = useState([27.0, 17.5]); // Center of Libya
+  const defaultCenter = [27.0, 17.5]; // Center of Libya
+  const defaultZoom = 5;
   const [showLocations, setShowLocations] = useState(true);
 
   const toggleFolder = (folderName) => {
@@ -133,7 +183,12 @@ const InteractiveMap = () => {
 
   const handleLocationSelect = (loc) => {
     setActiveLocation(loc);
-    setFlyTarget({ lat: loc.latitude, lng: loc.longitude, id: `sidebar-${loc.id}-${Date.now()}` });
+    setFlyTarget({ lat: loc.latitude, lng: loc.longitude, zoom: 11, id: `sidebar-${loc.id}-${Date.now()}` });
+  };
+
+  const handleResetView = () => {
+    setActiveLocation(null);
+    setFlyTarget(null);
   };
 
   return (
@@ -162,48 +217,60 @@ const InteractiveMap = () => {
           {/* Sidebar controls */}
           <Col lg={4}>
             <div className="map-sidebar">
-              {/* Search */}
-              <h5 className="fw-bold mb-3 d-flex align-items-center gap-2" style={{ color: 'var(--primary)' }}>
+              {/* Title */}
+              <h5 className="fw-bold mb-2 d-flex align-items-center gap-2" style={{ color: 'var(--primary)', flexShrink: 0 }}>
                 <FaFilter size={16} /> {t('map.filterTitle')}
               </h5>
 
-              {/* Layer Manager */}
-              <h6 className="fw-bold mb-2 text-secondary" style={{ fontSize: '0.85rem' }}>
-                🗺️ {isRtl ? 'طبقات الخريطة:' : 'Map Layers:'}
-              </h6>
-              <div className="mb-3 p-2 rounded" style={{ fontSize: '0.82rem', display: 'flex', flexDirection: 'column', gap: 6, background: 'var(--bg)', border: '1px solid var(--border)' }}>
-                <Form.Check 
-                  type="checkbox"
-                  id="layer-locations"
-                  label={isRtl ? 'معالم ومشروعات الهيئة' : 'Authority Landmarks & Projects'}
-                  checked={showLocations}
-                  onChange={e => setShowLocations(e.target.checked)}
-                />
-                {kmlFolders.map((folder, idx) => (
+              {/* Layer Manager with custom scrollbar */}
+              <div style={{ flexShrink: 0 }}>
+                <h6 className="fw-bold mb-1 text-secondary" style={{ fontSize: '0.82rem' }}>
+                  🗺️ {isRtl ? 'طبقات الخريطة:' : 'Map Layers:'}
+                </h6>
+                <div className="mb-2 p-2 rounded layers-scroll-container" style={{ 
+                  fontSize: '0.82rem', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: 6, 
+                  background: 'var(--bg)', 
+                  border: '1px solid var(--border)',
+                  maxHeight: '210px',
+                  overflowY: 'auto'
+                }}>
                   <Form.Check 
-                    key={folder}
                     type="checkbox"
-                    id={`layer-kml-${idx}`}
-                    label={
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ 
-                          width: 10, height: 10, borderRadius: '50%', 
-                          background: KML_LAYER_COLORS[idx % KML_LAYER_COLORS.length],
-                          display: 'inline-block', flexShrink: 0
-                        }} />
-                        {isRtl ? folder : (KML_FOLDER_MAP_EN[folder] || folder)} <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>(KML)</span>
-                      </span>
-                    }
-                    checked={!hiddenFolders.has(folder)}
-                    onChange={() => toggleFolder(folder)}
+                    id="layer-locations"
+                    label={isRtl ? 'معالم ومشروعات الهيئة' : 'Authority Landmarks & Projects'}
+                    checked={showLocations}
+                    onChange={e => setShowLocations(e.target.checked)}
                   />
-                ))}
-                {kmlFolders.length === 0 && (
-                  <span className="text-muted" style={{ fontSize: '0.78rem' }}>{isRtl ? 'لا توجد طبقات KML مستوردة' : 'No imported KML layers'}</span>
-                )}
+                  {kmlFolders.map((folder, idx) => (
+                    <Form.Check 
+                      key={folder}
+                      type="checkbox"
+                      id={`layer-kml-${idx}`}
+                      label={
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ 
+                            width: 10, height: 10, borderRadius: '50%', 
+                            background: KML_LAYER_COLORS[idx % KML_LAYER_COLORS.length],
+                            display: 'inline-block', flexShrink: 0
+                          }} />
+                          {isRtl ? folder : (KML_FOLDER_MAP_EN[folder] || folder)} <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>(KML)</span>
+                        </span>
+                      }
+                      checked={!hiddenFolders.has(folder)}
+                      onChange={() => toggleFolder(folder)}
+                    />
+                  ))}
+                  {kmlFolders.length === 0 && (
+                    <span className="text-muted" style={{ fontSize: '0.78rem' }}>{isRtl ? 'لا توجد طبقات KML مستوردة' : 'No imported KML layers'}</span>
+                  )}
+                </div>
               </div>
               
-              <div style={{ position: 'relative' }} className="mb-3">
+              {/* Search */}
+              <div style={{ position: 'relative', flexShrink: 0 }} className="mb-2">
                 <Form.Control
                   placeholder={t('map.searchPlaceholder')}
                   value={searchTerm}
@@ -211,10 +278,11 @@ const InteractiveMap = () => {
                   style={{
                     border: '2px solid var(--border)',
                     borderRadius: 10,
-                    paddingRight: isRtl ? '42px' : '16px',
-                    paddingLeft: isRtl ? '16px' : '42px',
-                    paddingTop: '10px',
-                    paddingBottom: '10px',
+                    paddingRight: isRtl ? '38px' : '14px',
+                    paddingLeft: isRtl ? '14px' : '38px',
+                    paddingTop: '7px',
+                    paddingBottom: '7px',
+                    fontSize: '0.85rem',
                     background: 'var(--bg)', color: 'var(--text)',
                     fontFamily: 'inherit',
                     boxShadow: 'none',
@@ -224,32 +292,32 @@ const InteractiveMap = () => {
                 <span style={{
                   position: 'absolute',
                   top: '50%',
-                  right: isRtl ? '14px' : 'auto',
-                  left: isRtl ? 'auto' : '14px',
+                  right: isRtl ? '12px' : 'auto',
+                  left: isRtl ? 'auto' : '12px',
                   transform: 'translateY(-50%)',
                   color: 'var(--text-muted)',
                   pointerEvents: 'none',
                   display: 'flex',
                 }}>
-                  <FaSearch size={15} />
+                  <FaSearch size={14} />
                 </span>
               </div>
 
               {/* Categories */}
-              <div className="d-flex gap-1 mb-3 flex-wrap">
+              <div className="d-flex gap-1 mb-2 flex-wrap" style={{ flexShrink: 0 }}>
                 {categories.map(cat => (
                   <button
                     key={cat.value}
                     onClick={() => setSelectedCat(cat.value)}
                     style={{
-                      padding: '5px 12px',
+                      padding: '4px 10px',
                       borderRadius: 99,
-                      border: selectedCat === cat.value ? '2px solid var(--primary)' : '2px solid var(--border)',
+                      border: selectedCat === cat.value ? '2px solid var(--primary)' : '1px solid var(--border)',
                       background: selectedCat === cat.value ? 'var(--primary)' : 'transparent',
                       color: selectedCat === cat.value ? '#fff' : 'var(--text-muted)',
                       fontWeight: 700,
                       cursor: 'pointer',
-                      fontSize: '0.8rem',
+                      fontSize: '0.75rem',
                       fontFamily: 'inherit',
                       transition: 'all 0.2s'
                     }}
@@ -315,30 +383,24 @@ const InteractiveMap = () => {
           {/* Leaflet Map with beautiful markers */}
           <Col lg={8}>
             <div className="map-wrapper">
-              <MapContainer center={mapCenter} zoom={5} style={{ height: '100%', width: '100%', zIndex: 1 }}>
+              <MapContainer center={defaultCenter} zoom={defaultZoom} style={{ height: '100%', width: '100%', zIndex: 1 }}>
                 <TileLayer
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
-                <MapController targetCoords={flyTarget} />
+                <MapController 
+                  targetCoords={flyTarget} 
+                  defaultCenter={defaultCenter} 
+                  defaultZoom={defaultZoom} 
+                  onResetView={handleResetView} 
+                />
                 
                 {/* Municipal locations layer */}
                 {showLocations && (
                   <MarkerClusterGroup chunkedLoading>
                     {filteredLocations.map((loc) => {
                       const markerColor = loc.color || '#003087';
-                      const coloredIcon = L.divIcon({
-                        className: '',
-                        html: `<div style="width:25px;height:41px;position:relative">
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 25 41" width="25" height="41">
-                            <path d="M12.5 0C5.6 0 0 5.6 0 12.5c0 9.4 12.5 28.5 12.5 28.5S25 21.9 25 12.5C25 5.6 19.4 0 12.5 0z" fill="${markerColor}"/>
-                            <circle cx="12.5" cy="12.5" r="5.5" fill="white" opacity="0.9"/>
-                          </svg>
-                        </div>`,
-                        iconSize: [25, 41],
-                        iconAnchor: [12, 41],
-                        popupAnchor: [1, -34],
-                      });
+                      const coloredIcon = createModernMarkerIcon(markerColor);
                       return (
                         <Marker
                           key={loc.id}
@@ -347,11 +409,11 @@ const InteractiveMap = () => {
                           eventHandlers={{
                             click: () => {
                               setActiveLocation(loc);
-                              setFlyTarget({ lat: loc.latitude, lng: loc.longitude, id: `loc-${loc.id}-${Date.now()}` });
+                              setFlyTarget({ lat: loc.latitude, lng: loc.longitude, zoom: 11, id: `loc-${loc.id}-${Date.now()}` });
                             },
                           }}
                         >
-                          <Popup>
+                          <Popup autoPan={true} autoPanPadding={[40, 40]}>
                             <div style={{ fontFamily: 'inherit', direction: isRtl ? 'rtl' : 'ltr', textAlign: isRtl ? 'right' : 'left' }}>
                               <h6 className="fw-bold mb-1" style={{ color: 'var(--primary)', fontSize: '0.95rem' }}>
                                 {isRtl ? (loc.name_ar || loc.name) : (loc.name_en || loc.name)}
@@ -384,18 +446,7 @@ const InteractiveMap = () => {
                   const color = feat.color || KML_LAYER_COLORS[folderIdx >= 0 ? folderIdx % KML_LAYER_COLORS.length : 0];
 
                   if (isPoint) {
-                    const pointIcon = L.divIcon({
-                      className: '',
-                      html: `<div style="width:25px;height:41px;position:relative">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 25 41" width="25" height="41">
-                          <path d="M12.5 0C5.6 0 0 5.6 0 12.5c0 9.4 12.5 28.5 12.5 28.5S25 21.9 25 12.5C25 5.6 19.4 0 12.5 0z" fill="${color}"/>
-                          <circle cx="12.5" cy="12.5" r="5.5" fill="white" opacity="0.9"/>
-                        </svg>
-                      </div>`,
-                      iconSize: [25, 41],
-                      iconAnchor: [12, 41],
-                      popupAnchor: [1, -34],
-                    });
+                    const pointIcon = createModernMarkerIcon(color);
                     return (
                       <Marker 
                         key={feat.id} 
@@ -404,12 +455,12 @@ const InteractiveMap = () => {
                         eventHandlers={{
                           click: () => {
                             if (Array.isArray(coords) && coords.length >= 2) {
-                              setFlyTarget({ lat: coords[0], lng: coords[1], id: `kml-${feat.id}-${Date.now()}` });
+                              setFlyTarget({ lat: coords[0], lng: coords[1], zoom: 11, id: `kml-${feat.id}-${Date.now()}` });
                             }
                           }
                         }}
                       >
-                        <Popup>
+                        <Popup autoPan={true} autoPanPadding={[40, 40]}>
                           <div style={{ fontFamily: 'inherit', direction: 'rtl', textAlign: 'right', minWidth: 180 }}>
                             <Badge className="mb-2" style={{ backgroundColor: color }}>{feat.folder}</Badge>
                             <h6 className="fw-bold mb-1" style={{ color: 'var(--primary)', fontSize: '0.9rem' }}>{feat.name || 'نقطة KML'}</h6>
@@ -426,6 +477,7 @@ const InteractiveMap = () => {
                       </Marker>
                     );
                   } else {
+                    const center = getFeatureCenter(coords);
                     return (
                       <Polygon
                         key={feat.id}
@@ -436,8 +488,15 @@ const InteractiveMap = () => {
                           fillOpacity: 0.25,
                           weight: 3,
                         }}
+                        eventHandlers={{
+                          click: () => {
+                            if (center) {
+                              setFlyTarget({ lat: center[0], lng: center[1], zoom: 11, id: `poly-${feat.id}-${Date.now()}` });
+                            }
+                          }
+                        }}
                       >
-                        <Popup>
+                        <Popup autoPan={true} autoPanPadding={[40, 40]}>
                           <div style={{ fontFamily: 'inherit', direction: 'rtl', textAlign: 'right', maxWidth: 300, maxHeight: 250, overflow: 'auto' }}>
                             <Badge className="mb-2" style={{ backgroundColor: color }}>{feat.folder}</Badge>
                             <h6 className="fw-bold mb-2">{feat.name || 'نطاق جغرافي'}</h6>

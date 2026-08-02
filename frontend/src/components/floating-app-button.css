@@ -1,0 +1,196 @@
+/* Ultra-Professional Floating Mobile App Button - Buttery Smooth Gliding Return */
+
+.floating-app-button-wrapper {
+  position: fixed;
+  bottom: 85px;
+  z-index: 9999;
+  pointer-events: none;
+  /* Outer idle breathing float animation applied to wrapper so button transform glides smoothly */
+  animation: appWrapperFloat 4.5s ease-in-out infinite alternate;
+}
+
+.floating-app-button-wrapper.floating-rtl {
+  right: 26px;
+  left: auto;
+}
+
+.floating-app-button-wrapper.floating-ltr {
+  left: 26px;
+  right: auto;
+}
+
+/* Gentle Idle Float on Wrapper */
+@keyframes appWrapperFloat {
+  0% {
+    transform: translateY(0px);
+  }
+  100% {
+    transform: translateY(-6px);
+  }
+}
+
+/* Premium Squircle Button */
+.floating-app-btn {
+  pointer-events: auto;
+  width: 62px;
+  height: 62px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #ffffff 0%, #f4fbf7 60%, #e6f9f0 100%);
+  border: 2px solid rgba(16, 185, 129, 0.35);
+  box-shadow: 
+    0 10px 28px rgba(13, 110, 85, 0.32),
+    0 4px 12px rgba(0, 0, 0, 0.14),
+    inset 0 1px 1px rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  /* Ultra-smooth exponential deceleration curve for gliding return */
+  transition: transform 0.85s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.6s ease, 
+              border-color 0.4s ease, 
+              background 0.4s ease,
+              opacity 0.6s ease;
+  padding: 6px;
+  backdrop-filter: blur(10px);
+  will-change: transform, opacity;
+  transform: translateY(0px) scale(1);
+  opacity: 1;
+}
+
+/* Vertical Elastic Scroll Animations - Pure Smooth Gliding (انسيابية تامة عند التوقف والرجوع) */
+
+/* 1. Scrolling Down (النزول - انخفاض ورزين) */
+.floating-app-btn.scroll-down {
+  transform: translateY(10px) scale(0.92);
+  box-shadow: 0 4px 14px rgba(13, 110, 85, 0.20);
+  opacity: 0.88;
+}
+
+/* 2. Scrolling Up (الركوب / الصعود - ارتفاع وانسيابية) */
+.floating-app-btn.scroll-up {
+  transform: translateY(-12px) scale(1.08);
+  box-shadow: 
+    0 18px 40px rgba(13, 110, 85, 0.42),
+    0 0 24px rgba(16, 185, 129, 0.38);
+  opacity: 1;
+}
+
+/* 3. Stopping / Idle (التوقف والرجوع للوضع الطبيعي بخطوات انسيابية) */
+.floating-app-btn.scroll-idle {
+  transform: translateY(0px) scale(1);
+  opacity: 1;
+}
+
+/* Soft Hover effect */
+.floating-app-btn:hover {
+  transform: translateY(-8px) scale(1.10) !important;
+  border-color: #10b981;
+  box-shadow: 
+    0 20px 42px rgba(13, 110, 85, 0.45),
+    0 6px 18px rgba(0, 0, 0, 0.18),
+    0 0 24px rgba(16, 185, 129, 0.4);
+  background: linear-gradient(135deg, #ffffff 0%, #ebfaf2 100%);
+  opacity: 1 !important;
+}
+
+.floating-app-btn:active {
+  transform: translateY(-2px) scale(0.96) !important;
+}
+
+/* Glowing Pulsing Ambient Wave Ring */
+.floating-app-pulse-ring {
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  right: -5px;
+  bottom: -5px;
+  border-radius: 24px;
+  border: 2px solid rgba(16, 185, 129, 0.6);
+  animation: appPulseWave 2.8s infinite ease-out;
+  pointer-events: none;
+}
+
+@keyframes appPulseWave {
+  0% {
+    transform: scale(0.96);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.20);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
+/* App Icon Image inside Floating Button */
+.floating-app-icon-img {
+  width: 46px;
+  height: 46px;
+  object-fit: cover;
+  border-radius: 14px;
+  transition: transform 0.4s ease;
+  display: block;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.floating-app-btn:hover .floating-app-icon-img {
+  transform: scale(1.06);
+}
+
+/* Status Pill Badge ("قريباً" / "Soon") */
+.floating-app-badge {
+  position: absolute;
+  top: -8px;
+  left: -4px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  font-size: 0.64rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 99px;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.45);
+  border: 1.5px solid #ffffff;
+  white-space: nowrap;
+  animation: badgePulse 2.4s infinite alternate;
+  pointer-events: none;
+  letter-spacing: 0.2px;
+}
+
+.floating-ltr .floating-app-badge {
+  left: auto;
+  right: -4px;
+}
+
+@keyframes badgePulse {
+  0%   { transform: scale(1); }
+  100% { transform: scale(1.10); }
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .floating-app-button-wrapper.floating-rtl {
+    right: 18px;
+    bottom: 75px;
+  }
+  .floating-app-button-wrapper.floating-ltr {
+    left: 18px;
+    bottom: 75px;
+  }
+
+  .floating-app-btn {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+  }
+
+  .floating-app-icon-img {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+  }
+}

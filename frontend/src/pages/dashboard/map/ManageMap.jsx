@@ -75,6 +75,24 @@ const ReviewMapClickSelector = ({ onSelectCoords }) => {
   return null;
 };
 
+const createModernMarkerIcon = (color = '#003087') => {
+  return L.divIcon({
+    className: 'modern-leaflet-marker',
+    html: `
+      <div class="marker-pin-inner" style="width:22px;height:28px;position:relative;cursor:pointer;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 3px 6px rgba(0,0,0,0.32));">
+        <svg width="22" height="28" viewBox="0 0 22 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M11 0C4.925 0 0 4.925 0 11C0 19.25 11 28 11 28C11 28 22 19.25 22 11C22 4.925 17.075 0 11 0Z" fill="${color}"/>
+          <circle cx="11" cy="10.5" r="5" fill="#FFFFFF" opacity="0.96"/>
+          <circle cx="11" cy="10.5" r="3" fill="${color}"/>
+        </svg>
+      </div>
+    `,
+    iconSize: [22, 28],
+    iconAnchor: [11, 28],
+    popupAnchor: [0, -25],
+  });
+};
+
 const ManageMap = () => {
   const [locations, setLocations] = useState([]);
   const { user } = useAuth();
@@ -126,6 +144,84 @@ const ManageMap = () => {
   const [kmlFile, setKmlFile] = useState(null);
   const [uploadingKml, setUploadingKml] = useState(false);
   const [kmlFeatures, setKmlFeatures] = useState([]);
+
+  // Data table tab state: 'all' | 'kml' | 'manual'
+  const [tableTab, setTableTab] = useState('all');
+  const [selectedKmlFolder, setSelectedKmlFolder] = useState(null);
+  const [showKmlDetailsModal, setShowKmlDetailsModal] = useState(false);
+  const [editingFolder, setEditingFolder] = useState(null);
+  const [newFolderName, setNewFolderName] = useState('');
+
+  const handleStartRenameFolder = (folderName) => {
+    setEditingFolder(folderName);
+    setNewFolderName(folderName);
+  };
+
+  const handleSaveRenameFolder = async (oldFolderName) => {
+    if (!newFolderName || !newFolderName.trim()) {
+      showResult('الرجاء كتابة اسم جديد للملف!', 'danger');
+      return;
+    }
+    const trimmed = newFolderName.trim();
+    if (trimmed === oldFolderName) {
+      setEditingFolder(null);
+      return;
+    }
+    try {
+      await api.renameKmlFolder(oldFolderName, trimmed);
+      fetchKmlFeatures();
+      setEditingFolder(null);
+      showResult(`تم تعديل اسم ملف KML من "${oldFolderName}" إلى "${trimmed}" بنجاح! ✏️`, 'success');
+    } catch (err) {
+      showResult(err.message || 'خطأ في تعديل اسم الملف', 'danger');
+    }
+  };
+
+  // Group KML features by folder/file name
+  const kmlFolderGroups = React.useMemo(() => {
+    const groups = {};
+    (kmlFeatures || []).forEach(feat => {
+      const folderName = feat.folder || 'عام';
+      if (!groups[folderName]) {
+        groups[folderName] = {
+          folder: folderName,
+          color: feat.color || '#003087',
+          features: [],
+        };
+      }
+      groups[folderName].features.push(feat);
+    });
+    return Object.values(groups);
+  }, [kmlFeatures]);
+
+  const handleDeleteKmlFolder = async (folderName) => {
+    const featCount = kmlFeatures.filter(f => f.folder === folderName).length;
+    if (!window.confirm(`هل أنت تأكد من حذف ملف/طبقة KML "${folderName}" وكافة معالمها (${featCount} معلم)؟`)) {
+      return;
+    }
+    try {
+      await api.deleteKmlFolder(folderName);
+      fetchKmlFeatures();
+      showResult(`تم حذف ملف/طبقة KML "${folderName}" بنجاح! 🗑️`, 'success');
+    } catch (err) {
+      showResult(err.message || 'خطأ في حذف ملف KML', 'danger');
+    }
+  };
+
+  const handleOpenKmlDetails = (folderName) => {
+    setSelectedKmlFolder(folderName);
+    setShowKmlDetailsModal(true);
+  };
+
+  const handleDeleteSingleKmlFeature = async (featureId) => {
+    try {
+      await api.deleteKmlFeature(featureId);
+      setKmlFeatures(prev => prev.filter(f => f.id !== featureId));
+      showResult('تم حذف المعلم بنجاح! 🗑️', 'success');
+    } catch (err) {
+      showResult(err.message || 'خطأ في حذف المعلم', 'danger');
+    }
+  };
 
   const fetchLocations = () => {
     api.getMapLocations({ all: true })
@@ -664,6 +760,15 @@ const ManageMap = () => {
                         <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#333' }}>
                           {folder} ({kmlFeatures.filter(f => f.folder === folder).length})
                         </span>
+                        <Button
+                          variant="link"
+                          className="p-0 text-decoration-none text-primary ms-1"
+                          onClick={() => handleStartRenameFolder(folder)}
+                          title="تعديل اسم الملف"
+                          style={{ fontSize: '0.8rem', lineHeight: 1 }}
+                        >
+                          ✏️
+                        </Button>
                       </div>
                     );
                   })}
@@ -698,18 +803,7 @@ const ManageMap = () => {
                 {locations.map((loc) => {
                   const markerColor = loc.color || '#003087';
                   const coloredIcon = Number(loc.is_approved) === 1
-                    ? L.divIcon({
-                        className: '',
-                        html: `<div style="width:25px;height:41px;position:relative">
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 25 41" width="25" height="41">
-                            <path d="M12.5 0C5.6 0 0 5.6 0 12.5c0 9.4 12.5 28.5 12.5 28.5S25 21.9 25 12.5C25 5.6 19.4 0 12.5 0z" fill="${markerColor}"/>
-                            <circle cx="12.5" cy="12.5" r="5.5" fill="white" opacity="0.9"/>
-                          </svg>
-                        </div>`,
-                        iconSize: [25, 41],
-                        iconAnchor: [12, 41],
-                        popupAnchor: [1, -34],
-                      })
+                    ? createModernMarkerIcon(markerColor)
                     : (Number(loc.is_approved) === 2 ? restudyIcon : pendingIcon);
                   return (
                     <Marker 
@@ -782,17 +876,51 @@ const ManageMap = () => {
         </Col>
       </Row>
 
-      {/* Locations table */}
+      {/* Locations & KML Data Table Card */}
       <Card className="border-0 shadow-sm card-custom rounded-4 mt-4 overflow-hidden">
+        <Card.Header className="bg-white border-bottom p-3">
+          <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h5 className="fw-bold m-0 text-primary d-flex align-items-center gap-2">
+              <FaLayerGroup size={18} />
+              جدول بيانات المعالم وملفات الخرائط
+            </h5>
+            <div className="d-flex gap-2 flex-wrap">
+              <Button
+                variant={tableTab === 'all' ? 'primary' : 'outline-primary'}
+                size="sm"
+                className="rounded-pill px-3 fw-bold"
+                onClick={() => setTableTab('all')}
+              >
+                🌐 جميع المعالم والملفات ({locations.length + kmlFolderGroups.length})
+              </Button>
+              <Button
+                variant={tableTab === 'kml' ? 'primary' : 'outline-primary'}
+                size="sm"
+                className="rounded-pill px-3 fw-bold"
+                onClick={() => setTableTab('kml')}
+              >
+                📁 ملفات وطبقات KML المستوردة ({kmlFolderGroups.length})
+              </Button>
+              <Button
+                variant={tableTab === 'manual' ? 'primary' : 'outline-primary'}
+                size="sm"
+                className="rounded-pill px-3 fw-bold"
+                onClick={() => setTableTab('manual')}
+              >
+                📍 المعالم المضافة يدوياً ({locations.length})
+              </Button>
+            </div>
+          </div>
+        </Card.Header>
         <Card.Body className="p-0">
           <div className="table-responsive">
             <Table hover className="mb-0 align-middle text-center">
               <thead className="bg-light">
                 <tr>
-                  <th className="py-3">اسم المعلم / المبنى</th>
-                  <th className="py-3">التصنيف</th>
-                  <th className="py-3">إحداثيات الموقع</th>
-                  <th className="py-3">أنشئ بواسطة</th>
+                  <th className="py-3">اسم المعلم / الملف</th>
+                  <th className="py-3">التصنيف / النوع</th>
+                  <th className="py-3">إحداثيات / تفاصيل المعالم</th>
+                  <th className="py-3">المصدر / أنشئ بواسطة</th>
                   <th className="py-3">الحالة</th>
                   <th className="py-3">اللون</th>
                   <th className="py-3">التفاصيل</th>
@@ -800,124 +928,227 @@ const ManageMap = () => {
                 </tr>
               </thead>
               <tbody>
-                {locations.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-5 text-muted">لا توجد معالم مضافة حالياً.</td>
-                  </tr>
-                ) : (
-                  locations.map((loc) => (
-                    <tr key={loc.id}>
-                      <td><div className="fw-bold">{loc.name_ar || loc.name}</div></td>
-                      <td>
-                        <Badge style={{ background: catColors[loc.category] || '#6c757d', padding: '6px 12px' }}>
-                          {loc.category}
-                        </Badge>
-                      </td>
-                      <td>
-                        <Badge bg="secondary" className="font-monospace small">
-                          Lat: {loc.latitude.toFixed(5)}, Lng: {loc.longitude.toFixed(5)}
-                        </Badge>
-                      </td>
-                      <td>
-                        <div className="small fw-semibold">{loc.creator_name || 'مدير النظام'}</div>
-                      </td>
-                      <td>
-                        {Number(loc.is_approved) === 1 ? (
-                          <Badge bg="success" className="py-1.5 px-2.5">معتمد</Badge>
-                        ) : Number(loc.is_approved) === 2 ? (
-                          <Badge bg="danger" className="py-1.5 px-2.5">إعادة دراسة</Badge>
-                        ) : (
-                          <Badge bg="warning" text="dark" className="py-1.5 px-2.5">قيد المراجعة</Badge>
+                {/* 1. KML Files / Layers Rows */}
+                {(tableTab === 'all' || tableTab === 'kml') && kmlFolderGroups.map((group) => (
+                  <tr key={`kml-folder-${group.folder}`} style={{ backgroundColor: 'rgba(0, 48, 135, 0.02)' }}>
+                    <td>
+                      {editingFolder === group.folder ? (
+                        <div className="d-flex align-items-center gap-1 justify-content-center">
+                          <span style={{ fontSize: '1.1rem' }}>📁</span>
+                          <Form.Control
+                            type="text"
+                            size="sm"
+                            value={newFolderName}
+                            onChange={e => setNewFolderName(e.target.value)}
+                            style={{ width: '190px', fontWeight: 700 }}
+                            autoFocus
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') handleSaveRenameFolder(group.folder);
+                              if (e.key === 'Escape') setEditingFolder(null);
+                            }}
+                          />
+                          <Button variant="success" size="sm" className="py-0 px-2 fw-bold" onClick={() => handleSaveRenameFolder(group.folder)} title="حفظ الاسم">
+                            ✔️
+                          </Button>
+                          <Button variant="secondary" size="sm" className="py-0 px-2" onClick={() => setEditingFolder(null)} title="إلغاء">
+                            ❌
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="fw-bold d-flex align-items-center justify-content-center gap-2 text-primary">
+                          <span style={{ fontSize: '1.1rem' }}>📁</span>
+                          <span>{group.folder}</span>
+                          <Button
+                            variant="link"
+                            className="p-0 text-decoration-none text-muted"
+                            onClick={() => handleStartRenameFolder(group.folder)}
+                            title="تعديل اسم الملف"
+                            style={{ opacity: 0.8 }}
+                          >
+                            ✏️
+                          </Button>
+                        </div>
+                      )}
+                    </td>
+                    <td>
+                      <Badge bg="info" className="px-2.5 py-1.5 fw-bold">
+                        طبقة KML/KMZ ({group.features.length} معلم)
+                      </Badge>
+                    </td>
+                    <td>
+                      <Badge bg="secondary" className="font-monospace small">
+                        {group.features.filter(f => f.type === 'Point').length} نقطة | {group.features.filter(f => f.type !== 'Point').length} نطاق
+                      </Badge>
+                    </td>
+                    <td>
+                      <div className="small fw-semibold text-muted">ملف خرائط مستورد</div>
+                    </td>
+                    <td>
+                      <Badge bg="success" className="py-1.5 px-2.5">مفعلة على الخريطة</Badge>
+                    </td>
+                    <td>
+                      <div className="d-flex align-items-center justify-content-center gap-2">
+                        <div style={{ width: 22, height: 22, borderRadius: '50%', background: group.color || '#003087', border: '2px solid #dee2e6', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                        {(loggedInUser.role?.slug === 'admin' || loggedInUser.role?.slug === 'data_entry') && (
+                          <input
+                            type="color"
+                            value={group.color || '#003087'}
+                            onChange={e => handleSaveKmlFolderColor(group.folder, e.target.value)}
+                            style={{ width: 26, height: 26, border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}
+                            title="غيِّر لون طبقة KML"
+                          />
                         )}
-                      </td>
-                      {/* Color cell with quick color picker */}
-                      <td>
-                        <div className="d-flex align-items-center justify-content-center gap-2">
-                          <div style={{ width: 22, height: 22, borderRadius: '50%', background: loc.color || '#003087', border: '2px solid #dee2e6', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
-                          {(loggedInUser.role?.slug === 'admin' || loggedInUser.role?.slug === 'data_entry') && (
-                            <input
-                              type="color"
-                              defaultValue={loc.color || '#003087'}
-                              onChange={e => {
-                                setLocations(prev => prev.map(l => l.id === loc.id ? { ...l, color: e.target.value } : l));
-                              }}
-                              onBlur={e => handleSaveMarkerColor(loc.id, e.target.value)}
-                              style={{ width: 26, height: 26, border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}
-                              title="غيِّر لون المعلم"
-                            />
-                          )}
-                        </div>
-                      </td>
-                      <td className="text-end text-muted small" style={{ maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {loc.details_ar || loc.details || '-'}
-                      </td>
-                      <td>
-                        <div className="d-flex justify-content-center gap-2">
-                          {loggedInUser.role?.slug === 'admin' || loggedInUser.role?.slug === 'data_entry' ? (
+                      </div>
+                    </td>
+                    <td className="text-center">
+                      <Button 
+                        variant="outline-info" 
+                        size="sm" 
+                        className="rounded-pill px-3 py-1 fw-bold"
+                        onClick={() => handleOpenKmlDetails(group.folder)}
+                      >
+                        👁️ معاينة التفاصيل ({group.features.length})
+                      </Button>
+                    </td>
+                    <td>
+                      <div className="d-flex justify-content-center">
+                        <Button 
+                          variant="danger" 
+                          size="sm" 
+                          onClick={() => handleDeleteKmlFolder(group.folder)} 
+                          className="d-flex align-items-center gap-1 fw-bold"
+                          title="حذف ملف KML بالكامل"
+                        >
+                          <FaTrashAlt />
+                          <span>حذف الملف</span>
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+
+                {/* 2. Manual Map Locations Rows */}
+                {(tableTab === 'all' || tableTab === 'manual') && locations.map((loc) => (
+                  <tr key={`manual-loc-${loc.id}`}>
+                    <td><div className="fw-bold">{loc.name_ar || loc.name}</div></td>
+                    <td>
+                      <Badge style={{ background: catColors[loc.category] || '#6c757d', padding: '6px 12px' }}>
+                        {loc.category}
+                      </Badge>
+                    </td>
+                    <td>
+                      <Badge bg="secondary" className="font-monospace small">
+                        Lat: {loc.latitude.toFixed(5)}, Lng: {loc.longitude.toFixed(5)}
+                      </Badge>
+                    </td>
+                    <td>
+                      <div className="small fw-semibold">{loc.creator_name || 'مدير النظام'}</div>
+                    </td>
+                    <td>
+                      {Number(loc.is_approved) === 1 ? (
+                        <Badge bg="success" className="py-1.5 px-2.5">معتمد</Badge>
+                      ) : Number(loc.is_approved) === 2 ? (
+                        <Badge bg="danger" className="py-1.5 px-2.5">إعادة دراسة</Badge>
+                      ) : (
+                        <Badge bg="warning" text="dark" className="py-1.5 px-2.5">قيد المراجعة</Badge>
+                      )}
+                    </td>
+                    {/* Color cell with quick color picker */}
+                    <td>
+                      <div className="d-flex align-items-center justify-content-center gap-2">
+                        <div style={{ width: 22, height: 22, borderRadius: '50%', background: loc.color || '#003087', border: '2px solid #dee2e6', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                        {(loggedInUser.role?.slug === 'admin' || loggedInUser.role?.slug === 'data_entry') && (
+                          <input
+                            type="color"
+                            defaultValue={loc.color || '#003087'}
+                            onChange={e => {
+                              setLocations(prev => prev.map(l => l.id === loc.id ? { ...l, color: e.target.value } : l));
+                            }}
+                            onBlur={e => handleSaveMarkerColor(loc.id, e.target.value)}
+                            style={{ width: 26, height: 26, border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}
+                            title="غيِّر لون المعلم"
+                          />
+                        )}
+                      </div>
+                    </td>
+                    <td className="text-end text-muted small" style={{ maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {loc.details_ar || loc.details || '-'}
+                    </td>
+                    <td>
+                      <div className="d-flex justify-content-center gap-2">
+                        {loggedInUser.role?.slug === 'admin' || loggedInUser.role?.slug === 'data_entry' ? (
+                          <>
+                            <Button 
+                              variant={Number(loc.is_approved) === 1 ? "primary" : "warning"} 
+                              size="sm" 
+                              onClick={() => handleOpenReview(loc)}
+                              className="d-flex align-items-center justify-content-center px-2.5 fw-bold"
+                            >
+                              {Number(loc.is_approved) === 1 ? 'تعديل' : 'مراجعة'}
+                            </Button>
+                            <Button 
+                              variant="danger" 
+                              size="sm" 
+                              onClick={() => handleDelete(loc.id)} 
+                              className="d-flex align-items-center justify-content-center gap-1"
+                              title="حذف المعلم"
+                            >
+                              <FaTrashAlt />
+                              <span>حذف</span>
+                            </Button>
+                          </>
+                        ) : (
+                          /* Creator or employee can edit/cancel their own points */
+                          (loc.created_by === loggedInUser.id) && (
                             <>
-                              <Button 
-                                variant={Number(loc.is_approved) === 1 ? "primary" : "warning"} 
-                                size="sm" 
-                                onClick={() => handleOpenReview(loc)}
-                                className="d-flex align-items-center justify-content-center px-2.5 fw-bold"
-                              >
-                                {Number(loc.is_approved) === 1 ? 'تعديل' : 'مراجعة'}
-                              </Button>
-                              <Button 
-                                variant="danger" 
-                                size="sm" 
-                                onClick={() => handleDelete(loc.id)} 
-                                className="d-flex align-items-center justify-content-center gap-1"
-                                title="حذف المعلم"
-                              >
-                                <FaTrashAlt />
-                                <span>حذف</span>
-                              </Button>
+                              {Number(loc.is_approved) === 2 ? (
+                                <Button 
+                                  variant="danger" 
+                                  size="sm" 
+                                  onClick={() => {
+                                    setReStudyForm({
+                                      id: loc.id,
+                                      name_ar: loc.name_ar || '',
+                                      name_en: loc.name_en || '',
+                                      category: loc.category || 'حكومي',
+                                      latitude: loc.latitude,
+                                      longitude: loc.longitude,
+                                      details_ar: loc.details_ar || '',
+                                      details_en: loc.details_en || '',
+                                      rejection_comment: loc.rejection_comment || '',
+                                    });
+                                    setShowReStudyModal(true);
+                                  }}
+                                  className="d-flex align-items-center justify-content-center px-2.5 fw-bold"
+                                >
+                                  تعديل وإعادة دراسة
+                                </Button>
+                              ) : (
+                                <Button 
+                                  variant="primary" 
+                                  size="sm" 
+                                  onClick={() => handleOpenReview(loc)}
+                                  className="d-flex align-items-center justify-content-center px-2.5 fw-bold"
+                                  disabled={Number(loc.is_approved) === 0}
+                                >
+                                  {Number(loc.is_approved) === 0 ? 'قيد المراجعة' : 'تعديل'}
+                                </Button>
+                              )}
                             </>
-                          ) : (
-                            /* Creator or employee can edit/cancel their own points */
-                            (loc.created_by === loggedInUser.id) && (
-                              <>
-                                {Number(loc.is_approved) === 2 ? (
-                                  <Button 
-                                    variant="danger" 
-                                    size="sm" 
-                                    onClick={() => {
-                                      setReStudyForm({
-                                        id: loc.id,
-                                        name_ar: loc.name_ar || '',
-                                        name_en: loc.name_en || '',
-                                        category: loc.category || 'حكومي',
-                                        latitude: loc.latitude,
-                                        longitude: loc.longitude,
-                                        details_ar: loc.details_ar || '',
-                                        details_en: loc.details_en || '',
-                                        rejection_comment: loc.rejection_comment || '',
-                                      });
-                                      setShowReStudyModal(true);
-                                    }}
-                                    className="d-flex align-items-center justify-content-center px-2.5 fw-bold"
-                                  >
-                                    تعديل وإعادة دراسة
-                                  </Button>
-                                ) : (
-                                  <Button 
-                                    variant="primary" 
-                                    size="sm" 
-                                    onClick={() => handleOpenReview(loc)}
-                                    className="d-flex align-items-center justify-content-center px-2.5 fw-bold"
-                                    disabled={Number(loc.is_approved) === 0}
-                                  >
-                                    {Number(loc.is_approved) === 0 ? 'قيد المراجعة' : 'تعديل'}
-                                  </Button>
-                                )}
-                              </>
-                            )
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                          )
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+
+                {/* Empty State */}
+                {((tableTab === 'kml' && kmlFolderGroups.length === 0) ||
+                  (tableTab === 'manual' && locations.length === 0) ||
+                  (tableTab === 'all' && locations.length === 0 && kmlFolderGroups.length === 0)) && (
+                  <tr>
+                    <td colSpan={8} className="py-5 text-muted">لا توجد معالم أو ملفات مضافة حالياً.</td>
+                  </tr>
                 )}
               </tbody>
             </Table>
@@ -1240,6 +1471,90 @@ const ManageMap = () => {
             </Button>
           </div>
         </Form>
+      </ModernModal>
+
+      {/* KML Folder Features Modal */}
+      <ModernModal
+        show={showKmlDetailsModal}
+        onClose={() => setShowKmlDetailsModal(false)}
+        title={`تفاصيل ومعالم ملف KML: "${selectedKmlFolder || ''}"`}
+        type="info"
+        size="xl"
+      >
+        <div>
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <Badge bg="primary" className="p-2 fs-6">
+              إجمالي المعالم: {kmlFeatures.filter(f => f.folder === selectedKmlFolder).length} معلم
+            </Badge>
+            <Button
+              variant="outline-danger"
+              size="sm"
+              className="fw-bold"
+              onClick={() => {
+                setShowKmlDetailsModal(false);
+                handleDeleteKmlFolder(selectedKmlFolder);
+              }}
+            >
+              🗑️ حذف هذا الملف بالكامل
+            </Button>
+          </div>
+          <div className="table-responsive" style={{ maxHeight: '450px', overflowY: 'auto' }}>
+            <Table striped bordered hover size="sm" className="align-middle text-center mb-0">
+              <thead className="table-light sticky-top">
+                <tr>
+                  <th className="py-2">#</th>
+                  <th className="py-2">اسم المعلم</th>
+                  <th className="py-2">النوع</th>
+                  <th className="py-2">الإحداثيات</th>
+                  <th className="py-2">التفاصيل / الوصف</th>
+                  <th className="py-2">إجراءات</th>
+                </tr>
+              </thead>
+              <tbody>
+                {kmlFeatures.filter(f => f.folder === selectedKmlFolder).map((feat, idx) => {
+                  let coordStr = 'مضلع / نطاق جغرافي';
+                  try {
+                    const coords = JSON.parse(feat.coordinates);
+                    if (feat.type === 'Point' && Array.isArray(coords)) {
+                      coordStr = `Lat: ${coords[0]?.toFixed(5)}, Lng: ${coords[1]?.toFixed(5)}`;
+                    }
+                  } catch {}
+
+                  return (
+                    <tr key={feat.id}>
+                      <td>{idx + 1}</td>
+                      <td className="fw-bold">{feat.name || 'معلم KML'}</td>
+                      <td>
+                        <Badge bg={feat.type === 'Point' ? 'success' : 'warning'}>
+                          {feat.type === 'Point' ? '📍 نقطة' : '🔷 مضلع'}
+                        </Badge>
+                      </td>
+                      <td className="font-monospace small">{coordStr}</td>
+                      <td className="small text-start" style={{ maxWidth: '280px' }}>
+                        {feat.details ? (
+                          <div dangerouslySetInnerHTML={{ __html: feat.details }} style={{ maxHeight: '60px', overflow: 'auto' }} />
+                        ) : (
+                          '-'
+                        )}
+                      </td>
+                      <td>
+                        <Button
+                          variant="outline-danger"
+                          size="sm"
+                          className="py-1 px-2.5 fw-bold"
+                          onClick={() => handleDeleteSingleKmlFeature(feat.id)}
+                          title="حذف هذا المعلم"
+                        >
+                          🗑️ حذف
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </Table>
+          </div>
+        </div>
       </ModernModal>
 
       {/* Result Toast */}

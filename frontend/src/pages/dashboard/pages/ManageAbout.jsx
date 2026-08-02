@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { Card, Form, Row, Col, Button, Spinner, Tab, Tabs, Badge, Alert } from 'react-bootstrap';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -25,6 +25,253 @@ const defaultTask = () => ({
   title_en: '',
   desc_en: ''
 });
+
+/* ═══════════════════════════════════════════════════════════════
+   DirectorsTreeEditor — embedded directly in هيكلية القيادة tab
+   Reads/writes /api/directors — auto-saves on blur, no page Save needed
+   ═══════════════════════════════════════════════════════════════ */
+const DirectorCard = ({ director, onSave, onDelete }) => {
+  const [form, setForm]       = useState({ ...director });
+  const [saving, setSaving]   = useState(false);
+  const [imgPrev, setImgPrev] = useState(director.img || '');
+  const [imgFile, setImgFile] = useState(null);
+  const fileRef               = useRef();
+
+  useEffect(() => { setForm({ ...director }); setImgPrev(director.img || ''); }, [director]);
+
+  const handleBlurSave = async () => {
+    setSaving(true);
+    try { await onSave(director.id, form, imgFile); setImgFile(null); }
+    finally { setSaving(false); }
+  };
+
+  const handleImgChange = async (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setImgFile(f);
+    setImgPrev(URL.createObjectURL(f));
+    setSaving(true);
+    try { await onSave(director.id, form, f); }
+    finally { setSaving(false); }
+  };
+
+  const isPresident = director.role === 'president';
+
+  return (
+    <Card className="border border-light rounded-3 mb-3" style={{ background: 'var(--card-bg, #fff)' }}>
+      <Card.Body className="p-3">
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <Badge bg={isPresident ? 'primary' : director.role === 'office' ? 'info' : 'success'} className="px-3 py-2">
+            {isPresident ? '👑 رئيس الهيئة' : director.title_ar}
+          </Badge>
+          <div className="d-flex gap-2 align-items-center">
+            {saving && <Spinner size="sm" animation="border" variant="primary" />}
+            {!isPresident && (
+              <Button variant="outline-danger" size="sm" className="py-0 px-2" onClick={() => onDelete(director.id)}>
+                <FaTrash size={11} />
+              </Button>
+            )}
+          </div>
+        </div>
+
+        <Row className="g-2">
+          <Col md={5}>
+            <Form.Group>
+              <Form.Label className="small fw-bold mb-1">اسم المدير (عربي)</Form.Label>
+              <Form.Control type="text" value={form.name_ar || ''}
+                onChange={e => setForm(f => ({ ...f, name_ar: e.target.value }))}
+                onBlur={handleBlurSave} placeholder="الاسم الكامل بالعربية"
+                style={{ fontFamily: 'Cairo, sans-serif' }} />
+            </Form.Group>
+          </Col>
+          <Col md={5}>
+            <Form.Group>
+              <Form.Label className="small fw-bold mb-1">Director Name (En)</Form.Label>
+              <Form.Control type="text" value={form.name_en || ''}
+                onChange={e => setForm(f => ({ ...f, name_en: e.target.value }))}
+                onBlur={handleBlurSave} placeholder="Full name in English"
+                style={{ direction: 'ltr' }} />
+            </Form.Group>
+          </Col>
+          {isPresident && (
+            <>
+              <Col md={5}>
+                <Form.Group>
+                  <Form.Label className="small fw-bold mb-1">المسمى الوظيفي (عربي)</Form.Label>
+                  <Form.Control type="text" value={form.title_ar || ''}
+                    onChange={e => setForm(f => ({ ...f, title_ar: e.target.value }))}
+                    onBlur={handleBlurSave} placeholder="رئيس الهيئة" />
+                </Form.Group>
+              </Col>
+              <Col md={5}>
+                <Form.Group>
+                  <Form.Label className="small fw-bold mb-1">Job Title (En)</Form.Label>
+                  <Form.Control type="text" value={form.title_en || ''}
+                    onChange={e => setForm(f => ({ ...f, title_en: e.target.value }))}
+                    onBlur={handleBlurSave} placeholder="Head of the Authority"
+                    style={{ direction: 'ltr' }} />
+                </Form.Group>
+              </Col>
+            </>
+          )}
+          <Col md={2} className="d-flex flex-column align-items-center justify-content-end">
+            <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => fileRef.current?.click()}>
+              {imgPrev
+                ? <img src={imgPrev} alt="صورة" style={{ width: 54, height: 54, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--primary)' }} />
+                : <div className="bg-light border rounded-circle d-flex align-items-center justify-content-center text-muted" style={{ width: 54, height: 54 }}><FaUser size={22} /></div>
+              }
+              <div style={{ position: 'absolute', bottom: -4, right: -4, width: 20, height: 20, borderRadius: '50%', background: '#003087', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <FaImage size={9} color="#fff" />
+              </div>
+            </div>
+            <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImgChange} />
+            <div className="text-muted mt-1" style={{ fontSize: '0.62rem', textAlign: 'center' }}>انقر للصورة</div>
+          </Col>
+        </Row>
+      </Card.Body>
+    </Card>
+  );
+};
+
+const DirectorsTreeEditor = ({ showToast }) => {
+  const [directors, setDirectors] = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [addRole, setAddRole]     = useState('office');
+  const [addForm, setAddForm]     = useState({ title_ar: '', title_en: '', name_ar: '', name_en: '' });
+  const [addImg, setAddImg]       = useState(null);
+  const [adding, setAdding]       = useState(false);
+  const [showAdd, setShowAdd]     = useState(false);
+  const addFileRef                = useRef();
+
+  const load = () => {
+    setLoading(true);
+    api.getDirectors()
+      .then(d => setDirectors(Array.isArray(d) ? d : []))
+      .catch(() => showToast('خطأ في تحميل المدراء', 'danger'))
+      .finally(() => setLoading(false));
+  };
+  useEffect(() => { load(); }, []);
+
+  const handleSave = async (id, form, imgFile) => {
+    const fd = new FormData();
+    fd.append('name_ar',  form.name_ar  || '');
+    fd.append('name_en',  form.name_en  || '');
+    fd.append('title_ar', form.title_ar || '');
+    fd.append('title_en', form.title_en || '');
+    fd.append('role',     form.role);
+    if (imgFile) fd.append('img', imgFile);
+    try {
+      const updated = await api.updateDirector(id, fd);
+      setDirectors(prev => prev.map(d => d.id === id ? { ...d, ...updated } : d));
+      showToast('تم الحفظ ✓', 'success');
+    } catch { showToast('خطأ أثناء الحفظ', 'danger'); }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('هل تريد حذف هذا المدير؟')) return;
+    try {
+      await api.deleteDirector(id);
+      setDirectors(prev => prev.filter(d => d.id !== id));
+      showToast('تم الحذف', 'warning');
+    } catch { showToast('خطأ أثناء الحذف', 'danger'); }
+  };
+
+  const handleAdd = async () => {
+    if (!addForm.title_ar) { showToast('يرجى إدخال اسم المكتب/الإدارة', 'warning'); return; }
+    setAdding(true);
+    try {
+      const fd = new FormData();
+      fd.append('role',     addRole);
+      fd.append('title_ar', addForm.title_ar);
+      fd.append('title_en', addForm.title_en || '');
+      fd.append('name_ar',  addForm.name_ar  || '');
+      fd.append('name_en',  addForm.name_en  || '');
+      fd.append('order_index', directors.filter(d => d.role === addRole).length + 1);
+      if (addImg) fd.append('img', addImg);
+      const created = await api.createDirector(fd);
+      setDirectors(prev => [...prev, created]);
+      setAddForm({ title_ar: '', title_en: '', name_ar: '', name_en: '' });
+      setAddImg(null); setShowAdd(false);
+      showToast('تمت الإضافة ✓', 'success');
+    } catch { showToast('خطأ أثناء الإضافة', 'danger'); }
+    finally { setAdding(false); }
+  };
+
+  if (loading) return <div className="text-center py-5"><Spinner animation="border" variant="primary" /></div>;
+
+  const president       = directors.filter(d => d.role === 'president');
+  const offices         = directors.filter(d => d.role === 'office').sort((a, b) => a.order_index - b.order_index);
+  const administrations = directors.filter(d => d.role === 'administration').sort((a, b) => a.order_index - b.order_index);
+
+  return (
+    <div>
+      <Alert variant="info" className="rounded-3 border-0 mb-4" style={{ background: 'rgba(13,110,253,0.07)' }}>
+        <FaInfoCircle className="ms-2" />
+        <strong>التعديلات تُحفظ فوراً</strong> — عند مغادرة أي حقل أو رفع صورة، يُحفظ تلقائياً في قاعدة البيانات.
+      </Alert>
+
+      <Card className="border-0 shadow-sm rounded-4 mb-4">
+        <Card.Header className="bg-primary text-white p-3 fw-bold">👑 رئيس الهيئة</Card.Header>
+        <Card.Body className="p-4">
+          {president.map(d => <DirectorCard key={d.id} director={d} onSave={handleSave} onDelete={handleDelete} />)}
+        </Card.Body>
+      </Card>
+
+      <Card className="border-0 shadow-sm rounded-4 mb-4">
+        <Card.Header className="bg-info text-white p-3 fw-bold d-flex justify-content-between align-items-center">
+          <span>📂 المكاتب التابعة للرئيس ({offices.length})</span>
+          <Button variant="light" size="sm" onClick={() => { setAddRole('office'); setShowAdd(true); }}>
+            <FaPlus className="ms-1" /> إضافة مكتب
+          </Button>
+        </Card.Header>
+        <Card.Body className="p-4">
+          {offices.map(d => <DirectorCard key={d.id} director={d} onSave={handleSave} onDelete={handleDelete} />)}
+          {offices.length === 0 && <p className="text-muted text-center">لا توجد مكاتب</p>}
+        </Card.Body>
+      </Card>
+
+      <Card className="border-0 shadow-sm rounded-4 mb-4">
+        <Card.Header className="bg-success text-white p-3 fw-bold d-flex justify-content-between align-items-center">
+          <span>🏢 الإدارات الرئيسية ({administrations.length})</span>
+          <Button variant="light" size="sm" onClick={() => { setAddRole('administration'); setShowAdd(true); }}>
+            <FaPlus className="ms-1" /> إضافة إدارة
+          </Button>
+        </Card.Header>
+        <Card.Body className="p-4">
+          {administrations.map(d => <DirectorCard key={d.id} director={d} onSave={handleSave} onDelete={handleDelete} />)}
+          {administrations.length === 0 && <p className="text-muted text-center">لا توجد إدارات</p>}
+        </Card.Body>
+      </Card>
+
+      {showAdd && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Card style={{ width: '95%', maxWidth: 500, borderRadius: 20 }}>
+            <Card.Header className="fw-bold d-flex justify-content-between">
+              <span>{addRole === 'office' ? '📂 إضافة مكتب جديد' : '🏢 إضافة إدارة جديدة'}</span>
+              <Button variant="link" className="p-0 text-muted" onClick={() => setShowAdd(false)}>✕</Button>
+            </Card.Header>
+            <Card.Body className="p-4">
+              <Row className="g-3">
+                <Col md={6}><Form.Group><Form.Label className="small fw-bold">الاسم بالعربية *</Form.Label><Form.Control value={addForm.title_ar} onChange={e => setAddForm(f => ({ ...f, title_ar: e.target.value }))} placeholder="مثال: مكتب التعاون الدولي" /></Form.Group></Col>
+                <Col md={6}><Form.Group><Form.Label className="small fw-bold">Name in English</Form.Label><Form.Control value={addForm.title_en} onChange={e => setAddForm(f => ({ ...f, title_en: e.target.value }))} placeholder="e.g. International Cooperation" style={{ direction: 'ltr' }} /></Form.Group></Col>
+                <Col md={6}><Form.Group><Form.Label className="small fw-bold">اسم المدير (عربي)</Form.Label><Form.Control value={addForm.name_ar} onChange={e => setAddForm(f => ({ ...f, name_ar: e.target.value }))} placeholder="الاسم الكامل" /></Form.Group></Col>
+                <Col md={6}><Form.Group><Form.Label className="small fw-bold">Director Name (En)</Form.Label><Form.Control value={addForm.name_en} onChange={e => setAddForm(f => ({ ...f, name_en: e.target.value }))} placeholder="Full name" style={{ direction: 'ltr' }} /></Form.Group></Col>
+                <Col md={12}><Form.Group><Form.Label className="small fw-bold">صورة المدير (اختياري)</Form.Label><Form.Control type="file" accept="image/*" ref={addFileRef} onChange={e => setAddImg(e.target.files?.[0] || null)} /></Form.Group></Col>
+              </Row>
+            </Card.Body>
+            <Card.Footer className="d-flex justify-content-end gap-2">
+              <Button variant="secondary" onClick={() => setShowAdd(false)}>إلغاء</Button>
+              <Button variant="primary" onClick={handleAdd} disabled={adding}>
+                {adding ? <Spinner size="sm" animation="border" /> : <FaPlus className="ms-1" />} إضافة
+              </Button>
+            </Card.Footer>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+};
+/* ═══════════════════════════════════════════════════════════════ */
 
 const ManageAbout = () => {
   const { showToast } = useToast();
@@ -243,166 +490,6 @@ const ManageAbout = () => {
     }
   };
 
-  // Leadership Tree Helpers
-  const updatePresident = (field, val) => {
-    setPageData(prev => ({
-      ...prev,
-      leadership_tree: {
-        ...prev.leadership_tree,
-        president: {
-          ...(prev.leadership_tree?.president || {}),
-          [field]: val
-        }
-      }
-    }));
-  };
-
-  const handlePresidentImageUpload = async (file) => {
-    if (!file) return;
-    const formData = new FormData();
-    formData.append('file', file);
-    try {
-      const res = await api.uploadFile(file);
-      const url = res?.url || res?.data?.url;
-      if (url) {
-        updatePresident('img', url);
-        showToast('تم رفع صورة رئيس الهيئة بنجاح! 📸', 'success');
-      }
-    } catch (err) {
-      console.error('President image upload error:', err);
-      showToast(err.message || 'خطأ أثناء رفع صورة رئيس الهيئة', 'danger');
-    }
-  };
-
-  const addOfficeNode = () => {
-    const newOffice = {
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-      title_ar: '',
-      title_en: '',
-      name_ar: '',
-      name_en: '',
-      img: ''
-    };
-    setPageData(prev => ({
-      ...prev,
-      leadership_tree: {
-        ...(prev.leadership_tree || {}),
-        president: prev.leadership_tree?.president || {},
-        administrations: prev.leadership_tree?.administrations || [],
-        offices: [...(prev.leadership_tree?.offices || []), newOffice]
-      }
-    }));
-    showToast('تم إضافة مكتب جديد', 'success');
-  };
-
-  const removeOfficeNode = (id) => {
-    setPageData(prev => ({
-      ...prev,
-      leadership_tree: {
-        ...(prev.leadership_tree || {}),
-        offices: (prev.leadership_tree?.offices || []).filter(o => o.id !== id)
-      }
-    }));
-    showToast('تم إزالة المكتب بنجاح', 'warning');
-  };
-
-  const updateOfficeNode = (id, field, val) => {
-    setPageData(prev => {
-      const updated = (prev.leadership_tree?.offices || []).map(o => {
-        if (o.id === id) {
-          return { ...o, [field]: val };
-        }
-        return o;
-      });
-      return {
-        ...prev,
-        leadership_tree: {
-          ...(prev.leadership_tree || {}),
-          offices: updated
-        }
-      };
-    });
-  };
-
-  const handleOfficeImageUpload = async (id, file) => {
-    if (!file) return;
-    try {
-      const res = await api.uploadFile(file);
-      const url = res?.url || res?.data?.url;
-      if (url) {
-        updateOfficeNode(id, 'img', url);
-        showToast('تم رفع صورة مدير المكتب! 📸', 'success');
-      }
-    } catch (err) {
-      console.error('Office image upload error:', err);
-      showToast(err.message || 'خطأ أثناء رفع الصورة', 'danger');
-    }
-  };
-
-  const addAdminNode = () => {
-    const newAdmin = {
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-      title_ar: '',
-      title_en: '',
-      name_ar: '',
-      name_en: '',
-      img: ''
-    };
-    setPageData(prev => ({
-      ...prev,
-      leadership_tree: {
-        ...(prev.leadership_tree || {}),
-        president: prev.leadership_tree?.president || {},
-        offices: prev.leadership_tree?.offices || [],
-        administrations: [...(prev.leadership_tree?.administrations || []), newAdmin]
-      }
-    }));
-    showToast('تم إضافة إدارة جديدة', 'success');
-  };
-
-  const removeAdminNode = (id) => {
-    setPageData(prev => ({
-      ...prev,
-      leadership_tree: {
-        ...(prev.leadership_tree || {}),
-        administrations: (prev.leadership_tree?.administrations || []).filter(a => a.id !== id)
-      }
-    }));
-    showToast('تم إزالة الإدارة بنجاح', 'warning');
-  };
-
-  const updateAdminNode = (id, field, val) => {
-    setPageData(prev => {
-      const updated = (prev.leadership_tree?.administrations || []).map(a => {
-        if (a.id === id) {
-          return { ...a, [field]: val };
-        }
-        return a;
-      });
-      return {
-        ...prev,
-        leadership_tree: {
-          ...(prev.leadership_tree || {}),
-          administrations: updated
-        }
-      };
-    });
-  };
-
-  const handleAdminImageUpload = async (id, file) => {
-    if (!file) return;
-    try {
-      const res = await api.uploadFile(file);
-      const url = res?.url || res?.data?.url;
-      if (url) {
-        updateAdminNode(id, 'img', url);
-        showToast('تم رفع صورة مدير الإدارة! 📸', 'success');
-      }
-    } catch (err) {
-      console.error('Admin image upload error:', err);
-      showToast(err.message || 'خطأ أثناء رفع الصورة', 'danger');
-    }
-  };
 
   if (loading) {
     return (
@@ -1140,316 +1227,9 @@ const ManageAbout = () => {
           </div>
         </Tab>
 
-        {/* ── Tab 3: Leadership Tree (New Dynamic Organization Tree) ── */}
+        {/* ── Tab 3: Leadership Tree — connected directly to /directors table ── */}
         <Tab eventKey="leadership" title="👥 هيكلية القيادة (الشجرة)">
-          <Alert variant="warning" className="rounded-3 border-0 mb-4" style={{ background: 'rgba(255,193,7,0.08)' }}>
-            <FaInfoCircle className="ms-2" />
-            <strong>تنبيه:</strong> هذا القسم يعرض هيكل القيادة على شكل شجرة تنظيمية متحركة تفاعلية تتجاوب مع التمرير في الصفحة العامة.
-          </Alert>
-
-          {/* Level 1: President */}
-          <Card className="border-0 shadow-sm rounded-4 mb-4">
-            <Card.Header className="bg-primary text-white p-3 fw-bold">
-              👑 المستوى الأول: رئيس الهيئة
-            </Card.Header>
-            <Card.Body className="p-4">
-              <Row className="g-3">
-                <Col md={6}>
-                  <Form.Group className="mb-2">
-                    <Form.Label className="fw-bold small">اسم الرئيس (بالعربية)</Form.Label>
-                    <Form.Control
-                      type="text"
-                      value={pageData.leadership_tree?.president?.name_ar || ''}
-                      onChange={e => updatePresident('name_ar', e.target.value)}
-                      placeholder="د. أحمد التومي"
-                    />
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-2">
-                    <Form.Label className="fw-bold small">اسم الرئيس (بالإنكليزية)</Form.Label>
-                    <Form.Control
-                      type="text"
-                      value={pageData.leadership_tree?.president?.name_en || ''}
-                      onChange={e => updatePresident('name_en', e.target.value)}
-                      placeholder="Dr. Ahmed Al-Toumi"
-                      style={{ direction: 'ltr' }}
-                    />
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-2">
-                    <Form.Label className="fw-bold small">المسمى الوظيفي (بالعربية)</Form.Label>
-                    <Form.Control
-                      type="text"
-                      value={pageData.leadership_tree?.president?.title_ar || 'رئيس الهيئة'}
-                      onChange={e => updatePresident('title_ar', e.target.value)}
-                    />
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-2">
-                    <Form.Label className="fw-bold small">المسمى الوظيفي (بالإنكليزية)</Form.Label>
-                    <Form.Control
-                      type="text"
-                      value={pageData.leadership_tree?.president?.title_en || 'Head of the Authority'}
-                      onChange={e => updatePresident('title_en', e.target.value)}
-                      style={{ direction: 'ltr' }}
-                    />
-                  </Form.Group>
-                </Col>
-                <Col md={8}>
-                  <Form.Group className="mb-2">
-                    <Form.Label className="fw-bold small"><FaImage className="ms-1" /> رابط الصورة</Form.Label>
-                    <Form.Control
-                      type="text"
-                      value={pageData.leadership_tree?.president?.img || ''}
-                      onChange={e => updatePresident('img', e.target.value)}
-                      placeholder="http://localhost:5000/uploads/..."
-                      style={{ direction: 'ltr', fontSize: '0.85rem' }}
-                    />
-                  </Form.Group>
-                  <Form.Group className="mb-2">
-                    <Form.Label className="fw-bold small">تحميل صورة الرئيس</Form.Label>
-                    <Form.Control
-                      type="file"
-                      accept="image/*"
-                      onChange={e => handlePresidentImageUpload(e.target.files[0])}
-                    />
-                  </Form.Group>
-                </Col>
-                <Col md={4} className="d-flex align-items-center justify-content-center">
-                  {pageData.leadership_tree?.president?.img ? (
-                    <img
-                      src={pageData.leadership_tree.president.img}
-                      alt="رئيس الهيئة"
-                      style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: '50%', border: '3px solid var(--primary)' }}
-                    />
-                  ) : (
-                    <div className="bg-light border rounded-circle d-flex align-items-center justify-content-center text-muted" style={{ width: 100, height: 100 }}>
-                      <FaUser size={40} />
-                    </div>
-                  )}
-                </Col>
-              </Row>
-            </Card.Body>
-          </Card>
-
-          {/* Level 2: Offices */}
-          <Card className="border-0 shadow-sm rounded-4 mb-4">
-            <Card.Header className="bg-info text-white p-3 fw-bold d-flex justify-content-between align-items-center">
-              <span>📂 المستوى الثاني: المكاتب التابعة للرئيس ({(pageData.leadership_tree?.offices || []).length})</span>
-              <Button variant="light" size="sm" onClick={addOfficeNode}>
-                <FaPlus className="ms-1" /> إضافة مكتب جديد
-              </Button>
-            </Card.Header>
-            <Card.Body className="p-4">
-              <div className="d-flex flex-column gap-3">
-                {(pageData.leadership_tree?.offices || []).map((office, idx) => (
-                  <Card key={office.id || idx} className="border border-light bg-light rounded-3">
-                    <Card.Body className="p-3">
-                      <div className="d-flex justify-content-between align-items-center mb-2">
-                        <Badge bg="info">المكتب {idx + 1}</Badge>
-                        <Button variant="outline-danger" size="sm" className="py-0 px-2" onClick={() => removeOfficeNode(office.id)}>
-                          <FaTrash size={10} className="ms-1" /> حذف المكتب
-                        </Button>
-                      </div>
-                      <Row className="g-2">
-                        <Col md={6}>
-                          <Form.Group>
-                            <Form.Label className="small fw-bold">اسم المكتب (بالعربية)</Form.Label>
-                            <Form.Control
-                              type="text"
-                              value={office.title_ar || ''}
-                              onChange={e => updateOfficeNode(office.id, 'title_ar', e.target.value)}
-                              placeholder="مثال: مكتب التعاون الدولي"
-                            />
-                          </Form.Group>
-                        </Col>
-                        <Col md={6}>
-                          <Form.Group>
-                            <Form.Label className="small fw-bold">اسم المكتب (بالإنكليزية)</Form.Label>
-                            <Form.Control
-                              type="text"
-                              value={office.title_en || ''}
-                              onChange={e => updateOfficeNode(office.id, 'title_en', e.target.value)}
-                              placeholder="International Cooperation Office"
-                              style={{ direction: 'ltr' }}
-                            />
-                          </Form.Group>
-                        </Col>
-                        <Col md={4}>
-                          <Form.Group>
-                            <Form.Label className="small fw-bold">اسم المدير (عربي)</Form.Label>
-                            <Form.Control
-                              type="text"
-                              value={office.name_ar || ''}
-                              onChange={e => updateOfficeNode(office.id, 'name_ar', e.target.value)}
-                              placeholder="اسم المدير"
-                            />
-                          </Form.Group>
-                        </Col>
-                        <Col md={4}>
-                          <Form.Group>
-                            <Form.Label className="small fw-bold">اسم المدير (إنكليزي)</Form.Label>
-                            <Form.Control
-                              type="text"
-                              value={office.name_en || ''}
-                              onChange={e => updateOfficeNode(office.id, 'name_en', e.target.value)}
-                              placeholder="Manager Name"
-                              style={{ direction: 'ltr' }}
-                            />
-                          </Form.Group>
-                        </Col>
-                        <Col md={4}>
-                          <Form.Group>
-                            <Form.Label className="small fw-bold">تحميل صورة المدير</Form.Label>
-                            <Form.Control
-                              type="file"
-                              accept="image/*"
-                              onChange={e => handleOfficeImageUpload(office.id, e.target.files[0])}
-                            />
-                          </Form.Group>
-                        </Col>
-                        <Col md={10}>
-                          <Form.Group>
-                            <Form.Label className="small fw-bold">رابط الصورة</Form.Label>
-                            <Form.Control
-                              type="text"
-                              value={office.img || ''}
-                              onChange={e => updateOfficeNode(office.id, 'img', e.target.value)}
-                              placeholder="http://..."
-                              style={{ direction: 'ltr', fontSize: '0.8rem' }}
-                            />
-                          </Form.Group>
-                        </Col>
-                        <Col md={2} className="d-flex align-items-center justify-content-center">
-                          {office.img ? (
-                            <img src={office.img} alt="المدير" style={{ width: 50, height: 50, objectFit: 'cover', borderRadius: '50%', border: '1px solid var(--border)' }} />
-                          ) : (
-                            <div className="bg-white border rounded-circle d-flex align-items-center justify-content-center text-muted" style={{ width: 50, height: 50 }}>
-                              <FaUser size={20} />
-                            </div>
-                          )}
-                        </Col>
-                      </Row>
-                    </Card.Body>
-                  </Card>
-                ))}
-              </div>
-            </Card.Body>
-          </Card>
-
-          {/* Level 3: Administrations */}
-          <Card className="border-0 shadow-sm rounded-4 mb-4">
-            <Card.Header className="bg-success text-white p-3 fw-bold d-flex justify-content-between align-items-center">
-              <span>🏢 المستوى الثالث: الإدارات الرئيسية ({(pageData.leadership_tree?.administrations || []).length})</span>
-              <Button variant="light" size="sm" onClick={addAdminNode}>
-                <FaPlus className="ms-1" /> إضافة إدارة جديدة
-              </Button>
-            </Card.Header>
-            <Card.Body className="p-4">
-              <div className="d-flex flex-column gap-3">
-                {(pageData.leadership_tree?.administrations || []).map((admin, idx) => (
-                  <Card key={admin.id || idx} className="border border-light bg-light rounded-3">
-                    <Card.Body className="p-3">
-                      <div className="d-flex justify-content-between align-items-center mb-2">
-                        <Badge bg="success">الإدارة {idx + 1}</Badge>
-                        <Button variant="outline-danger" size="sm" className="py-0 px-2" onClick={() => removeAdminNode(admin.id)}>
-                          <FaTrash size={10} className="ms-1" /> حذف الإدارة
-                        </Button>
-                      </div>
-                      <Row className="g-2">
-                        <Col md={6}>
-                          <Form.Group>
-                            <Form.Label className="small fw-bold">اسم الإدارة (بالعربية)</Form.Label>
-                            <Form.Control
-                              type="text"
-                              value={admin.title_ar || ''}
-                              onChange={e => updateAdminNode(admin.id, 'title_ar', e.target.value)}
-                              placeholder="مثال: إدارة نظم المعلومات الجغرافية"
-                            />
-                          </Form.Group>
-                        </Col>
-                        <Col md={6}>
-                          <Form.Group>
-                            <Form.Label className="small fw-bold">اسم الإدارة (بالإنكليزية)</Form.Label>
-                            <Form.Control
-                              type="text"
-                              value={admin.title_en || ''}
-                              onChange={e => updateAdminNode(admin.id, 'title_en', e.target.value)}
-                              placeholder="GIS Administration"
-                              style={{ direction: 'ltr' }}
-                            />
-                          </Form.Group>
-                        </Col>
-                        <Col md={4}>
-                          <Form.Group>
-                            <Form.Label className="small fw-bold">اسم المدير (عربي)</Form.Label>
-                            <Form.Control
-                              type="text"
-                              value={admin.name_ar || ''}
-                              onChange={e => updateAdminNode(admin.id, 'name_ar', e.target.value)}
-                              placeholder="اسم المدير"
-                            />
-                          </Form.Group>
-                        </Col>
-                        <Col md={4}>
-                          <Form.Group>
-                            <Form.Label className="small fw-bold">اسم المدير (إنكليزي)</Form.Label>
-                            <Form.Control
-                              type="text"
-                              value={admin.name_en || ''}
-                              onChange={e => updateAdminNode(admin.id, 'name_en', e.target.value)}
-                              placeholder="Manager Name"
-                              style={{ direction: 'ltr' }}
-                            />
-                          </Form.Group>
-                        </Col>
-                        <Col md={4}>
-                          <Form.Group>
-                            <Form.Label className="small fw-bold">تحميل صورة المدير</Form.Label>
-                            <Form.Control
-                              type="file"
-                              accept="image/*"
-                              onChange={e => handleAdminImageUpload(admin.id, e.target.files[0])}
-                            />
-                          </Form.Group>
-                        </Col>
-                        <Col md={10}>
-                          <Form.Group>
-                            <Form.Label className="small fw-bold">رابط الصورة</Form.Label>
-                            <Form.Control
-                              type="text"
-                              value={admin.img || ''}
-                              onChange={e => updateAdminNode(admin.id, 'img', e.target.value)}
-                              placeholder="http://..."
-                              style={{ direction: 'ltr', fontSize: '0.8rem' }}
-                            />
-                          </Form.Group>
-                        </Col>
-                        <Col md={2} className="d-flex align-items-center justify-content-center">
-                          {admin.img ? (
-                            <img src={admin.img} alt="المدير" style={{ width: 50, height: 50, objectFit: 'cover', borderRadius: '50%', border: '1px solid var(--border)' }} />
-                          ) : (
-                            <div className="bg-white border rounded-circle d-flex align-items-center justify-content-center text-muted" style={{ width: 50, height: 50 }}>
-                              <FaUser size={20} />
-                            </div>
-                          )}
-                        </Col>
-                      </Row>
-                    </Card.Body>
-                  </Card>
-                ))}
-              </div>
-            </Card.Body>
-          </Card>
-
-          <div className="d-flex justify-content-end mt-4">
-            <PrimaryButton onClick={handleSave} icon={<FaSave />} disabled={saving}>
-              {saving ? 'جاري الحفظ...' : 'حفظ التعديلات'}
-            </PrimaryButton>
-          </div>
+          <DirectorsTreeEditor showToast={showToast} />
         </Tab>
 
         {/* ── Tab 4: Tasks/Duties ── */}
@@ -1574,3 +1354,4 @@ const ManageAbout = () => {
 };
 
 export default ManageAbout;
+

@@ -68,26 +68,25 @@ const Home = () => {
   });
   const [currentImageIdx, setCurrentImageIdx] = useState(0);
 
-  // Load hero images FIRST immediately on mount for instant display
+  // Load data and listen for live updates
   useEffect(() => {
-    api.getHomeImages()
-      .then(imagesData => {
-        if (Array.isArray(imagesData) && imagesData.length > 0) {
-          // Preload all hero images in browser cache before setting state
-          imagesData.forEach(img => {
-            const image = new Image();
-            image.src = img.image_url;
-          });
-          setHomeImages(imagesData);
-          localStorage.setItem('cached_home_images', JSON.stringify(imagesData));
-        }
-      })
-      .catch(() => {});
-  }, []);
+    const fetchHeroImages = () => {
+      api.getHomeImages()
+        .then(imagesData => {
+          if (Array.isArray(imagesData) && imagesData.length > 0) {
+            imagesData.forEach(img => {
+              const image = new Image();
+              image.src = img.image_url;
+            });
+            setHomeImages(imagesData);
+            localStorage.setItem('cached_home_images', JSON.stringify(imagesData));
+          }
+        })
+        .catch(() => {});
+    };
 
-  // Load remaining data after hero images
-  useEffect(() => {
     const loadData = async () => {
+      fetchHeroImages();
       try {
         const statsData = await api.getStatistics();
         if (Array.isArray(statsData)) setStats(statsData);
@@ -109,6 +108,9 @@ const Home = () => {
     };
 
     loadData();
+
+    window.addEventListener('upaw:data-updated', loadData);
+    return () => window.removeEventListener('upaw:data-updated', loadData);
   }, []);
 
   // Auto-play dynamic home slider cross-fade

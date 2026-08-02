@@ -252,6 +252,10 @@ const DashboardLayout = () => {
       '/dashboard/profile': 'الملف الشخصي',
       '/dashboard/companies': 'الشركات',
       '/dashboard/manage-gallery': 'إدارة معرض الصور',
+      '/dashboard/manage-home-images': 'صور الصفحة الرئيسية',
+      '/dashboard/requests': 'الطلبات الواردة',
+      '/dashboard/submit-requests': 'تقديم الطلبات',
+      '/dashboard/audit-logs': 'سجلات التدقيق',
     };
     const currentTitle = pathTitles[location.pathname] || 'لوحة التحكم';
     return (
@@ -546,7 +550,7 @@ const DashboardLayout = () => {
                           background: isDark ? 'rgba(253,126,20,0.1)' : 'rgba(0,48,135,0.06)',
                           color: isDark ? '#fd7e14' : 'var(--primary)'
                         }}>
-                          {isDark ? 'مفعّل' : 'ملغى'}
+                          {isDark ? 'مُفعَّل' : 'ملغى'}
                         </span>
                       </button>
 

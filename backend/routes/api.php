@@ -37,13 +37,14 @@ Route::middleware('cache.api:300')->group(function () {
     Route::get('/complaints', [ApiController::class, 'getComplaints']);
     Route::get('/experts', [ApiController::class, 'getExperts']);
     Route::get('/employee-requests', [ApiController::class, 'getEmployeeRequests']);
+    Route::get('/directors', [ApiController::class, 'getDirectors']);
 });
 
 // ─── Visitor count (not cached — must track unique IPs) ───────────────────────
 Route::get('/visitors/count', [ApiController::class, 'getVisitorCount']);
 
-// ─── Notifications (user-specific, short cache 30s) ──────────────────────────
-Route::get('/notifications/unread-count', [ApiController::class, 'getNotificationsUnreadCount']);
+// ─── Notifications (user-specific, short cache 15s/30s) ──────────────────────
+Route::middleware('cache.api:15')->get('/notifications/unread-count', [ApiController::class, 'getNotificationsUnreadCount']);
 Route::middleware('cache.api:30')->group(function () {
     Route::get('/notifications', [ApiController::class, 'getNotifications']);
 });
@@ -54,7 +55,7 @@ Route::post('/cache/clear', function () {
     return response()->json(['message' => 'Cache cleared']);
 });
 
-// ─── WRITE routes (never cached) ─────────────────────────────────────────────
+Route::post('/app-subscriptions', [ApiController::class, 'subscribeToApp']);
 
 Route::put('/documents/{id}', [ApiController::class, 'updateDocument']);
 Route::post('/documents', [ApiController::class, 'createDocument']);
@@ -90,6 +91,9 @@ Route::delete('/kml/features/clear', [ApiController::class, 'clearKmlFeatures'])
 Route::post('/kml/upload', [ApiController::class, 'uploadKml']);
 Route::put('/kml/features/{id}/color', [ApiController::class, 'updateKmlFeatureColor']);
 Route::put('/kml/folders/color', [ApiController::class, 'updateKmlFolderColor']);
+Route::put('/kml/folders/rename', [ApiController::class, 'renameKmlFolder']);
+Route::delete('/kml/folders', [ApiController::class, 'deleteKmlFolder']);
+Route::delete('/kml/features/{id}', [ApiController::class, 'deleteKmlFeature']);
 
 Route::post('/news', [ApiController::class, 'createNews']);
 Route::put('/news/{id}', [ApiController::class, 'updateNews']);
@@ -130,6 +134,12 @@ Route::delete('/experts/{id}', [ApiController::class, 'deleteExpert']);
 Route::put('/employee-requests/{id}/status', [ApiController::class, 'updateEmployeeRequestStatus']);
 Route::post('/employee-requests', [ApiController::class, 'createEmployeeRequest']);
 Route::delete('/employee-requests/{id}', [ApiController::class, 'deleteEmployeeRequest']);
+
+// ─── Directors ────────────────────────────────────────────────────────────────
+Route::post('/directors', [ApiController::class, 'createDirector']);
+Route::post('/directors/{id}', [ApiController::class, 'updateDirector']); // POST supports FormData (file upload)
+Route::put('/directors/{id}', [ApiController::class, 'updateDirector']);
+Route::delete('/directors/{id}', [ApiController::class, 'deleteDirector']);
 
 // ─── Audit Logs & Security Controls (admin only, never cached) ────────────────
 Route::get('/audit-logs/stats',            [AuditLogController::class, 'stats']);

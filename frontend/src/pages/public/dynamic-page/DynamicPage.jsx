@@ -114,32 +114,45 @@ const DynamicPage = () => {
   const [reportsSearch, setReportsSearch] = useState('');
   const [reportsSortConfig, setReportsSortConfig] = useState({ key: 'date', dir: 'desc' });
 
-  // 1. Fetch page data asynchronously
+  // 1. Fetch page data asynchronously and listen for live updates
   useEffect(() => {
     let cancelled = false;
 
-    fetchPageData(decodedId).then(data => {
-      if (cancelled) return;
-      setPageData(data);
-      setLoading(false);
-    });
-
-    if (isReportsPage) {
-      api.getWorkingPapers().then(rows => {
+    const loadData = () => {
+      fetchPageData(decodedId).then(data => {
         if (cancelled) return;
-        const normalized = (rows || []).map(r => ({
-          id: r.id,
-          title: isRtl ? r.title_ar || r.title_en : r.title_en || r.title_ar,
-          category: r.category || r.section || '',
-          date: r.date || r.published_at || '',
-          file: r.file_url || r.file || '',
-        }));
-        setReportsRows(normalized);
-        setReportsLoading(false);
-      }).catch(() => { if (!cancelled) setReportsLoading(false); });
-    }
+        setPageData(data);
+        setLoading(false);
+      });
 
-    return () => { cancelled = true; };
+      if (isReportsPage) {
+        api.getWorkingPapers().then(rows => {
+          if (cancelled) return;
+          const normalized = (rows || []).map(r => ({
+            id: r.id,
+            title: isRtl ? r.title_ar || r.title_en : r.title_en || r.title_ar,
+            category: r.category || r.section || '',
+            date: r.date || r.published_at || '',
+            file: r.file_url || r.file || '',
+          }));
+          setReportsRows(normalized);
+          setReportsLoading(false);
+        }).catch(() => { if (!cancelled) setReportsLoading(false); });
+      }
+    };
+
+    loadData();
+
+    const handleUpdate = () => {
+      loadData();
+    };
+
+    window.addEventListener('upaw:data-updated', handleUpdate);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('upaw:data-updated', handleUpdate);
+    };
   }, [decodedId, isReportsPage, isRtl]);
 
   // 2. On-demand translation effect
@@ -540,256 +553,160 @@ const DynamicPage = () => {
     return () => container.removeEventListener('click', handleClick);
   }, [displayContent, navigate]);
 
-  // 4. Convert WordPress gallery structures AND plain img groups into interactive carousels
+  // 4. Convert WordPress gallery structures AND plain img groups into masonry photo grids with Lightbox viewer
   useEffect(() => {
     const container = carouselRef.current;
     if (!container || !displayContent) return;
 
-    // Clean up any previously-built carousels or lightboxes to avoid duplicates
-    container.querySelectorAll('.wp-carousel-wrapper').forEach(el => el.remove());
-    document.querySelectorAll('.wp-lightbox').forEach(el => el.remove());
+    // Clean up any existing lightbox overlay
+    document.querySelectorAll('.wp-masonry-lightbox').forEach(el => el.remove());
 
-    // ── Helper: build and insert a carousel from an imagesData array ──────────
-    const buildCarousel = (imagesData, labelText, insertBefore, removeNodes) => {
-      if (imagesData.length === 0) return;
+    // Helper to build Lightbox overlay for an array of images
+    const setupLightbox = (imagesData) => {
+      if (imagesData.length === 0) return null;
 
-      const outerWrapper = document.createElement('div');
-      outerWrapper.className = 'wp-carousel-wrapper';
+      const lb = document.createElement('div');
+      lb.className = 'wp-masonry-lightbox';
+      const lbBg = document.createElement('div');
+      lbBg.className = 'wp-masonry-lb-bg';
+      lb.appendChild(lbBg);
 
-      if (labelText) {
-        const label = document.createElement('div');
-        label.className = 'wp-carousel-label';
-        label.textContent = labelText;
-        outerWrapper.appendChild(label);
-      }
+      const lbContent = document.createElement('div');
+      lbContent.className = 'wp-masonry-lb-content';
 
-      const carousel = document.createElement('div');
-      carousel.className = 'wp-carousel';
+      const lbImg = document.createElement('img');
+      lbImg.className = 'wp-masonry-lb-img';
+      lbContent.appendChild(lbImg);
 
-      const viewport = document.createElement('div');
-      viewport.className = 'wp-carousel-viewport';
+      const lbClose = document.createElement('button');
+      lbClose.className = 'wp-masonry-lb-close';
+      lbClose.innerHTML = '&times;';
+      lb.appendChild(lbClose);
 
-      const activeImg = document.createElement('img');
-      activeImg.className = 'wp-carousel-img';
-      activeImg.draggable = false;
-      viewport.appendChild(activeImg);
+      const lbPrev = document.createElement('button');
+      lbPrev.className = 'wp-masonry-lb-btn wp-masonry-lb-prev';
+      lbPrev.innerHTML = '&#8249;';
+      lb.appendChild(lbPrev);
 
-      const spinner = document.createElement('div');
-      spinner.className = 'wp-carousel-spinner spinner-border text-light';
-      spinner.setAttribute('role', 'status');
-      viewport.appendChild(spinner);
+      const lbNext = document.createElement('button');
+      lbNext.className = 'wp-masonry-lb-btn wp-masonry-lb-next';
+      lbNext.innerHTML = '&#8250;';
+      lb.appendChild(lbNext);
 
-      carousel.appendChild(viewport);
+      const lbCounter = document.createElement('div');
+      lbCounter.className = 'wp-masonry-lb-counter';
+      lb.appendChild(lbCounter);
 
-      const counter = document.createElement('div');
-      counter.className = 'wp-carousel-counter';
-      carousel.appendChild(counter);
+      lb.appendChild(lbContent);
+      document.body.appendChild(lb);
 
-      const btnLeft = document.createElement('button');
-      btnLeft.className = 'wp-carousel-btn wp-carousel-btn-left';
-      btnLeft.innerHTML = '&#8250;';
-      btnLeft.setAttribute('aria-label', 'Previous');
-
-      const btnRight = document.createElement('button');
-      btnRight.className = 'wp-carousel-btn wp-carousel-btn-right';
-      btnRight.innerHTML = '&#8249;';
-      btnRight.setAttribute('aria-label', 'Next');
-
-      carousel.appendChild(btnLeft);
-      carousel.appendChild(btnRight);
-
-      const zones = document.createElement('div');
-      zones.className = 'wp-carousel-click-zones';
-      const zoneLeft = document.createElement('div');
-      zoneLeft.className = 'wp-carousel-zone-left';
-      const zoneMiddle = document.createElement('div');
-      zoneMiddle.className = 'wp-carousel-zone-middle';
-      const zoneRight = document.createElement('div');
-      zoneRight.className = 'wp-carousel-zone-right';
-      zones.appendChild(zoneLeft);
-      zones.appendChild(zoneMiddle);
-      zones.appendChild(zoneRight);
-      viewport.appendChild(zones);
-
-      const dotsEl = document.createElement('div');
-      dotsEl.className = 'wp-carousel-dots';
-
-      outerWrapper.appendChild(carousel);
-      outerWrapper.appendChild(dotsEl);
-
-      const lightbox = document.createElement('div');
-      lightbox.className = 'wp-lightbox';
-      const lightboxImg = document.createElement('img');
-      lightboxImg.className = 'wp-lightbox-img';
-      lightbox.appendChild(lightboxImg);
-      const lightboxClose = document.createElement('button');
-      lightboxClose.className = 'wp-lightbox-close';
-      lightboxClose.innerHTML = '&times;';
-      lightbox.appendChild(lightboxClose);
-      document.body.appendChild(lightbox);
-
-      let current = 0;
       const total = imagesData.length;
+      let current = 0;
 
-      const updateSlide = (idx) => {
+      const openLightbox = (idx) => {
         current = (idx + total) % total;
-        carousel.classList.add('wp-carousel-loading');
-        activeImg.style.opacity = '0.35';
-        const imgData = imagesData[current];
-        activeImg.src = imgData.full;
-        activeImg.alt = imgData.alt;
-        activeImg.onload = () => {
-          carousel.classList.remove('wp-carousel-loading');
-          activeImg.style.opacity = '1';
-        };
-        activeImg.onerror = () => {
-          activeImg.src = imgData.thumbnail;
-          carousel.classList.remove('wp-carousel-loading');
-          activeImg.style.opacity = '1';
-        };
-        counter.textContent = `${current + 1} / ${total}`;
-        dotsEl.querySelectorAll('.wp-carousel-dot').forEach((dot, i) => {
-          dot.classList.toggle('active', i === current);
-        });
+        const d = imagesData[current];
+        lbImg.style.opacity = '0.3';
+        lbImg.src = d.full || d.thumbnail;
+        lbImg.alt = d.alt || '';
+        lbImg.onload = () => { lbImg.style.opacity = '1'; };
+        lbCounter.textContent = `${current + 1} / ${total}`;
+        lb.classList.add('active');
       };
+      const closeLightbox = () => lb.classList.remove('active');
+      const goNext = () => openLightbox(current + 1);
+      const goPrev = () => openLightbox(current - 1);
 
-      for (let i = 0; i < total; i++) {
-        const dot = document.createElement('button');
-        dot.className = 'wp-carousel-dot' + (i === 0 ? ' active' : '');
-        dot.addEventListener('click', () => updateSlide(i));
-        dotsEl.appendChild(dot);
-      }
+      lbClose.addEventListener('click', closeLightbox);
+      lbBg.addEventListener('click', closeLightbox);
+      lbPrev.addEventListener('click', (e) => { e.stopPropagation(); goPrev(); });
+      lbNext.addEventListener('click', (e) => { e.stopPropagation(); goNext(); });
 
-      const goNext = () => updateSlide(current + 1);
-      const goPrev = () => updateSlide(current - 1);
+      const keyHandler = (e) => {
+        if (!lb.classList.contains('active')) return;
+        if (e.key === 'ArrowRight') goNext();
+        if (e.key === 'ArrowLeft') goPrev();
+        if (e.key === 'Escape') closeLightbox();
+      };
+      document.addEventListener('keydown', keyHandler);
 
-      btnLeft.addEventListener('click', (e) => { e.stopPropagation(); goNext(); });
-      btnRight.addEventListener('click', (e) => { e.stopPropagation(); goPrev(); });
-      zoneLeft.addEventListener('click', (e) => { e.stopPropagation(); goNext(); });
-      zoneRight.addEventListener('click', (e) => { e.stopPropagation(); goPrev(); });
-
-      zoneMiddle.addEventListener('click', (e) => {
-        e.stopPropagation();
-        lightboxImg.src = imagesData[current].full;
-        lightbox.classList.add('active');
-      });
-      lightboxClose.addEventListener('click', () => lightbox.classList.remove('active'));
-      lightbox.addEventListener('click', () => lightbox.classList.remove('active'));
-      lightboxImg.addEventListener('click', (e) => e.stopPropagation());
-
-      let startX = 0;
-      viewport.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, { passive: true });
-      viewport.addEventListener('touchend', e => {
-        const diff = startX - e.changedTouches[0].clientX;
-        if (Math.abs(diff) > 40) { if (diff > 0) goNext(); else goPrev(); }
-      }, { passive: true });
-
-      updateSlide(0);
-
-      // Insert carousel and remove original nodes
-      if (insertBefore && insertBefore.parentNode) {
-        insertBefore.parentNode.insertBefore(outerWrapper, insertBefore);
-      }
-      removeNodes.forEach(n => { if (n.parentNode) n.remove(); });
+      return { openLightbox, destroy: () => { document.removeEventListener('keydown', keyHandler); if (lb.parentNode) lb.remove(); } };
     };
 
-    // ── 1. WordPress .gallery containers ─────────────────────────────────────
+    // ── 1. WordPress .gallery containers ──────────────────────────────────────
     const galleries = Array.from(container.querySelectorAll('.gallery'));
-    galleries.forEach(gallery => {
-      const figures = Array.from(gallery.querySelectorAll('figure.gallery-item'));
-      const imagesData = figures.map(fig => {
-        const img = fig.querySelector('img');
-        const link = fig.querySelector('a');
-        if (!img) return null;
-        return {
-          thumbnail: img.getAttribute('src'),
-          full: link ? link.getAttribute('href') : img.getAttribute('src'),
-          alt: img.getAttribute('alt') || '',
-        };
-      }).filter(Boolean);
+    const cleanupFns = [];
 
-      if (imagesData.length === 0) return;
+    if (galleries.length > 0) {
+      galleries.forEach(gallery => {
+        gallery.classList.add('wp-masonry-grid');
+        const items = Array.from(gallery.querySelectorAll('figure.gallery-item, .gallery-item'));
+        const imagesData = items.map(fig => {
+          const img = fig.querySelector('img');
+          const link = fig.querySelector('a');
+          if (!img) return null;
+          return {
+            thumbnail: img.getAttribute('src'),
+            full: link ? link.getAttribute('href') : img.getAttribute('src'),
+            alt: img.getAttribute('alt') || '',
+          };
+        }).filter(Boolean);
 
-      let labelText = '';
-      const prevEl = gallery.previousElementSibling;
-      if (prevEl && prevEl.tagName.toLowerCase() === 'p') {
-        labelText = prevEl.textContent.trim();
-      }
-
-      buildCarousel(imagesData, labelText, gallery, [gallery, ...(labelText && prevEl ? [prevEl] : [])]);
-    });
-
-    // ── 2. Plain consecutive <img> tags (for pages without .gallery markup) ──
-    // Only run if no .gallery was found, to avoid double processing
-    if (galleries.length === 0) {
-      const allImgs = Array.from(container.querySelectorAll('img:not(.wp-carousel-img)'));
-      if (allImgs.length === 0) return;
-
-      // Group images by their top-level parent block under container
-      const imageWrappers = [];
-      allImgs.forEach(img => {
-        let el = img;
-        while (el && el.parentElement !== container) {
-          el = el.parentElement;
-        }
-        if (el && !imageWrappers.includes(el)) imageWrappers.push(el);
-      });
-
-      // Group consecutive wrappers (split on non-image text content between them)
-      const wrapperGroups = [];
-      let wg = [];
-      imageWrappers.forEach((wrapper, i) => {
-        wg.push(wrapper);
-        const next = imageWrappers[i + 1];
-        if (!next) { wrapperGroups.push([...wg]); wg = []; return; }
-        let between = wrapper.nextSibling;
-        let hasContent = false;
-        while (between && between !== next) {
-          if (between.nodeType === Node.TEXT_NODE && between.textContent.trim()) { hasContent = true; break; }
-          if (between.nodeType === Node.ELEMENT_NODE && !['br'].includes(between.tagName.toLowerCase())) {
-            const txt = between.textContent.trim();
-            if (txt && !between.querySelector('img')) { hasContent = true; break; }
-          }
-          between = between.nextSibling;
-        }
-        if (hasContent) { wrapperGroups.push([...wg]); wg = []; }
-      });
-
-      wrapperGroups.forEach(wrappers => {
-        const imagesData = [];
-        wrappers.forEach(w => {
-          // w may be the <img> itself (direct child) or a container holding <img>s
-          const isImg = w.tagName && w.tagName.toLowerCase() === 'img';
-          const imgs = isImg ? [w] : Array.from(w.querySelectorAll('img'));
-          imgs.forEach(img => {
-            const link = img.closest('a');
-            imagesData.push({
-              thumbnail: img.getAttribute('src'),
-              full: link ? link.getAttribute('href') : img.getAttribute('src'),
-              alt: img.getAttribute('alt') || '',
-            });
-          });
-        });
         if (imagesData.length === 0) return;
-
-        // Label from preceding heading or paragraph
-        let labelText = '';
-        const prevEl = wrappers[0].previousElementSibling;
-        if (prevEl && /^(h[1-6]|p)$/i.test(prevEl.tagName)) {
-          labelText = prevEl.textContent.trim();
+        const lbObj = setupLightbox(imagesData);
+        if (lbObj) {
+          cleanupFns.push(lbObj.destroy);
+          items.forEach((fig, idx) => {
+            fig.style.cursor = 'pointer';
+            const handleClick = (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              lbObj.openLightbox(idx);
+            };
+            fig.addEventListener('click', handleClick);
+            const a = fig.querySelector('a');
+            if (a) a.addEventListener('click', handleClick);
+          });
         }
-
-        buildCarousel(imagesData, labelText, wrappers[0], wrappers);
       });
+    } else {
+      // ── 2. Plain img elements ──────────────────────────────────────
+      const allImgs = Array.from(container.querySelectorAll('img:not(.wp-masonry-lb-img)'));
+      if (allImgs.length > 0) {
+        const imagesData = allImgs.map(img => {
+          const link = img.closest('a');
+          return {
+            thumbnail: img.getAttribute('src'),
+            full: link ? link.getAttribute('href') : img.getAttribute('src'),
+            alt: img.getAttribute('alt') || '',
+          };
+        });
+        const lbObj = setupLightbox(imagesData);
+        if (lbObj) {
+          cleanupFns.push(lbObj.destroy);
+          allImgs.forEach((img, idx) => {
+            img.style.cursor = 'pointer';
+            const handleClick = (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              lbObj.openLightbox(idx);
+            };
+            img.addEventListener('click', handleClick);
+            const link = img.closest('a');
+            if (link) link.addEventListener('click', handleClick);
+          });
+        }
+      }
     }
 
-    // Cleanup lightbox on unmount
     return () => {
-      document.querySelectorAll('.wp-lightbox').forEach(el => el.remove());
+      cleanupFns.forEach(fn => fn());
+      document.querySelectorAll('.wp-masonry-lightbox').forEach(el => el.remove());
     };
   }, [displayContent]);
 
   const hasSections = pageData?.sections && pageData.sections.length > 0;
+
   const hasHtmlContent = displayContent && displayContent.trim().length > 0;
 
   return (

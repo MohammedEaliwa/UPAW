@@ -19,51 +19,30 @@ const About = () => {
   const [scrollState, setScrollState] = React.useState(0); // 0: President, 1: Offices, 2: Administrations
 
   React.useEffect(() => {
-    api.getPageAbout()
-      .then(d => {
-        // Fallback for leadership tree if it doesn't exist in DB yet
-        let tree = d.leadership_tree;
-        if (!tree || typeof tree !== 'object' || !tree.president) {
-          const legacyPresident = Array.isArray(d.leadership) && d.leadership.length > 0 
-            ? d.leadership[0] 
-            : { name_ar: 'د. أحمد التومي', name_en: 'Dr. Ahmed Al-Toumi', title_ar: 'رئيس الهيئة', title_en: 'Head of the Authority', img: `${UPLOADS_URL}/director_image.jpg` };
-          
-          tree = {
-            president: {
-              name_ar: legacyPresident.name_ar || 'د. أحمد التومي',
-              name_en: legacyPresident.name_en || 'Dr. Ahmed Al-Toumi',
-              title_ar: legacyPresident.title_ar || 'رئيس الهيئة',
-              title_en: legacyPresident.title_en || 'Head of the Authority',
-              img: legacyPresident.img || `${UPLOADS_URL}/director_image.jpg`
-            },
-            offices: [
-              { id: '1', title_ar: 'مكتب مشروعات الانشاءات و الصيانة', title_en: 'Construction & Maintenance Projects Office', name_ar: '', name_en: '', img: '' },
-              { id: '2', title_ar: 'مكتب المراجعه الداخلية', title_en: 'Internal Audit Office', name_ar: '', name_en: '', img: '' },
-              { id: '3', title_ar: 'مكتب مشروع الخطة الوطنية', title_en: 'National Plan Project Office', name_ar: '', name_en: '', img: '' },
-              { id: '4', title_ar: 'مدير مكتب الرئيس', title_en: 'President\'s Office Director', name_ar: '', name_en: '', img: '' },
-              { id: '5', title_ar: 'مكتب التعاون الدولي', title_en: 'International Cooperation Office', name_ar: '', name_en: '', img: '' },
-              { id: '6', title_ar: 'مكتب المتابعة التنفيدية', title_en: 'Executive Follow-up Office', name_ar: '', name_en: '', img: '' }
-            ],
-            administrations: [
-              { id: '7', title_ar: 'ادارة نظم المعلومات الجغرافية و التوثيق', title_en: 'GIS & Documentation Administration', name_ar: '', name_en: '', img: '' },
-              { id: '8', title_ar: 'ادارة القانونية', title_en: 'Legal Administration', name_ar: '', name_en: '', img: '' },
-              { id: '9', title_ar: 'ادارة الموارد البشرية', title_en: 'Human Resources Administration', name_ar: '', name_en: '', img: '' },
-              { id: '10', title_ar: 'ادارة المالية', title_en: 'Finance Administration', name_ar: '', name_en: '', img: '' },
-              { id: '11', title_ar: 'ادارة الشؤون الادارية', title_en: 'Administrative Affairs Administration', name_ar: '', name_en: '', img: '' },
-              { id: '12', title_ar: 'ادارة شؤون الفروع', title_en: 'Branches Affairs Administration', name_ar: '', name_en: '', img: '' },
-              { id: '13', title_ar: 'ادارة التخطيط الطبيعي', title_en: 'Physical Planning Administration', name_ar: '', name_en: '', img: '' },
-              { id: '14', title_ar: 'ادارة التخطيط الحضري', title_en: 'Urban Planning Administration', name_ar: '', name_en: '', img: '' },
-              { id: '15', title_ar: 'ادارة التفتيش و المتابعه', title_en: 'Inspection & Follow-up Administration', name_ar: '', name_en: '', img: '' }
-            ]
-          };
-        }
+    const loadData = () => {
+      Promise.all([
+        api.getPageAbout().catch(() => ({})),
+        api.getDirectors().catch(() => []),
+      ]).then(([d, directors]) => {
+        const presidentRow = directors.find(r => r.role === 'president') || null;
+        const offices      = directors.filter(r => r.role === 'office').sort((a, b) => a.order_index - b.order_index);
+        const admins       = directors.filter(r => r.role === 'administration').sort((a, b) => a.order_index - b.order_index);
 
-        setPageData({
-          ...d,
-          leadership_tree: tree
-        });
-      })
-      .catch(() => {});
+        const tree = {
+          president: presidentRow
+            ? { name_ar: presidentRow.name_ar || '', name_en: presidentRow.name_en || '', title_ar: presidentRow.title_ar || 'رئيس الهيئة', title_en: presidentRow.title_en || 'Head of the Authority', img: presidentRow.img || '' }
+            : { name_ar: '', name_en: '', title_ar: 'رئيس الهيئة', title_en: 'Head of the Authority', img: '' },
+          offices,
+          administrations: admins,
+        };
+
+        setPageData({ ...d, leadership_tree: tree });
+      });
+    };
+
+    loadData();
+
+    window.addEventListener('upaw:data-updated', loadData);
 
     const handleResize = () => {
       setIsLargeScreen(window.innerWidth >= 992);
@@ -97,6 +76,7 @@ const About = () => {
     window.addEventListener('scroll', handleScroll);
     
     return () => {
+      window.removeEventListener('upaw:data-updated', loadData);
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('scroll', handleScroll);
     };
@@ -211,7 +191,7 @@ const About = () => {
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: index * 0.05 }}
+          transition={{ duration: 0.25, delay: index * 0.04 }}
           style={{
             background: 'var(--card-bg)',
             borderRadius: 16,
@@ -223,11 +203,11 @@ const About = () => {
             flexDirection: 'row',
             alignItems: 'stretch',
             direction: isRtl ? 'rtl' : 'ltr',
-            transition: 'box-shadow 0.25s, transform 0.25s',
+            transition: 'box-shadow 0.08s ease, transform 0.08s ease',
             cursor: 'default',
             position: 'relative',
           }}
-          whileHover={{ y: -3, boxShadow: `0 8px 28px ${hoverShadowColor}` }}
+          whileHover={{ y: -5, boxShadow: `0 10px 32px ${hoverShadowColor}`, transition: { duration: 0.08, type: 'tween' } }}
         >
           {/* Side Accent Bar */}
           <div style={{

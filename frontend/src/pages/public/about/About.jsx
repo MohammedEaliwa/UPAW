@@ -1,5 +1,5 @@
 import React from 'react';
-import { Container, Row, Col, Button } from 'react-bootstrap';
+import { Container, Row, Col, Button, Modal, Form, InputGroup } from 'react-bootstrap';
 import { motion, AnimatePresence } from 'motion/react';
 import * as FaIcons from 'react-icons/fa';
 import { useLanguage } from '../../../context/LanguageContext';
@@ -16,8 +16,12 @@ const About = () => {
   const [isLargeScreen, setIsLargeScreen] = React.useState(window.innerWidth >= 992);
   const [mobileActiveLevel, setMobileActiveLevel] = React.useState('offices'); // 'offices' | 'admins'
   
+  // Interactive Tree Controls
   const treeContainerRef = React.useRef(null);
   const [scrollState, setScrollState] = React.useState(0); // 0: President, 1: Offices, 2: Administrations
+  const [viewMode, setViewMode] = React.useState('scroll'); // 'scroll' | 'grid'
+  const [treeSearchQuery, setTreeSearchQuery] = React.useState('');
+  const [selectedNodeModal, setSelectedNodeModal] = React.useState(null);
 
   React.useEffect(() => {
     const loadData = () => {
@@ -50,7 +54,7 @@ const About = () => {
     };
 
     const handleScroll = () => {
-      if (!treeContainerRef.current) return;
+      if (!treeContainerRef.current || viewMode !== 'scroll') return;
       const rect = treeContainerRef.current.getBoundingClientRect();
       const containerHeight = rect.height;
       const visibleTop = rect.top;
@@ -81,7 +85,7 @@ const About = () => {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('scroll', handleScroll);
     };
-  }, []);
+  }, [viewMode]);
 
   const getDynamicIcon = (iconName) => {
     const Icon = FaIcons[iconName];
@@ -141,6 +145,18 @@ const About = () => {
     return FaIcons.FaLandmark;
   };
 
+  // Filter helper for tree search
+  const filterNodes = (nodes = []) => {
+    if (!treeSearchQuery.trim()) return nodes;
+    const q = treeSearchQuery.toLowerCase();
+    return nodes.filter(n => 
+      (n.title_ar && n.title_ar.toLowerCase().includes(q)) ||
+      (n.title_en && n.title_en.toLowerCase().includes(q)) ||
+      (n.name_ar && n.name_ar.toLowerCase().includes(q)) ||
+      (n.name_en && n.name_en.toLowerCase().includes(q))
+    );
+  };
+
   const renderTreeCard = (node, index = 0, type = 'office') => {
     if (!node) return null;
     
@@ -152,7 +168,7 @@ const About = () => {
       : 'linear-gradient(180deg, #1a4faa 0%, #001d5a 100%)';
       
     const avatarBorder = isOffice ? '#0ea5e9' : '#003087';
-    const avatarGlow = isOffice ? 'rgba(14, 165, 233, 0.2)' : 'rgba(0, 48, 135, 0.2)';
+    const avatarGlow = isOffice ? 'rgba(14, 165, 233, 0.25)' : 'rgba(0, 48, 135, 0.25)';
     
     const fallbackAvatarBg = isOffice
       ? 'linear-gradient(135deg, rgba(14,165,233,0.12) 0%, rgba(2,132,199,0.2) 100%)'
@@ -163,8 +179,8 @@ const About = () => {
       : 'linear-gradient(135deg, #003087 0%, #001d5a 100%)';
       
     const hoverShadowColor = isOffice
-      ? 'rgba(14,165,233,0.14)'
-      : 'rgba(0,48,135,0.18)';
+      ? 'rgba(14,165,233,0.25)'
+      : 'rgba(0,48,135,0.28)';
       
     const directorNameColor = isOffice ? '#0284c7' : '#003087';
 
@@ -176,6 +192,7 @@ const About = () => {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25, delay: index * 0.04 }}
+          onClick={() => setSelectedNodeModal({ ...node, type })}
           style={{
             background: 'var(--card-bg)',
             borderRadius: 16,
@@ -187,11 +204,17 @@ const About = () => {
             flexDirection: 'row',
             alignItems: 'stretch',
             direction: isRtl ? 'rtl' : 'ltr',
-            transition: 'box-shadow 0.08s ease, transform 0.08s ease',
-            cursor: 'default',
+            transition: 'all 0.15s ease',
+            cursor: 'pointer',
             position: 'relative',
           }}
-          whileHover={{ y: -5, boxShadow: `0 10px 32px ${hoverShadowColor}`, transition: { duration: 0.08, type: 'tween' } }}
+          whileHover={{ 
+            y: -5, 
+            scale: 1.015,
+            borderColor: themeColor,
+            boxShadow: `0 12px 32px ${hoverShadowColor}`, 
+            transition: { duration: 0.12, type: 'tween' } 
+          }}
         >
           {/* Side Accent Bar */}
           <div style={{
@@ -273,7 +296,7 @@ const About = () => {
             )}
           </div>
 
-          {/* Index Number */}
+          {/* Index Badge */}
           <div style={{
             position: 'absolute',
             top: 8,
@@ -288,6 +311,19 @@ const About = () => {
           }}>
             {index + 1}
           </div>
+
+          {/* Hover Action Icon */}
+          <div style={{
+            position: 'absolute',
+            bottom: 8,
+            [isRtl ? 'left' : 'right']: 10,
+            fontSize: '0.7rem',
+            color: themeColor,
+            opacity: 0.6,
+            display: 'flex', alignItems: 'center', gap: 3
+          }}>
+            <FaIcons.FaInfoCircle size={11} />
+          </div>
         </motion.div>
       </Col>
     );
@@ -296,18 +332,23 @@ const About = () => {
   const renderPresidentCard = (node) => {
     if (!node) return null;
     return (
-      <div style={{
-        background: 'var(--card-bg)',
-        borderRadius: 22,
-        border: '2px solid var(--primary)',
-        boxShadow: '0 8px 32px rgba(0,48,135,0.18)',
-        overflow: 'hidden',
-        width: 240,
-        flexShrink: 0,
-        textAlign: 'center',
-        position: 'relative',
-        zIndex: 10,
-      }}>
+      <motion.div 
+        whileHover={{ scale: 1.03, y: -4 }}
+        onClick={() => setSelectedNodeModal({ ...node, type: 'president' })}
+        style={{
+          background: 'var(--card-bg)',
+          borderRadius: 22,
+          border: '2px solid var(--primary)',
+          boxShadow: '0 8px 32px rgba(0,48,135,0.18)',
+          overflow: 'hidden',
+          width: 240,
+          flexShrink: 0,
+          textAlign: 'center',
+          position: 'relative',
+          zIndex: 10,
+          cursor: 'pointer'
+        }}
+      >
         <div style={{ width: '100%', height: 220, position: 'relative', overflow: 'hidden', background: 'linear-gradient(135deg, #001225 0%, #003087 100%)' }}>
           {node.img ? (
             <img
@@ -338,7 +379,7 @@ const About = () => {
             {isRtl ? node.title_ar : node.title_en}
           </span>
         </div>
-      </div>
+      </motion.div>
     );
   };
 
@@ -557,6 +598,9 @@ const About = () => {
     }
   };
 
+  const filteredOffices = pageData?.leadership_tree ? filterNodes(pageData.leadership_tree.offices) : [];
+  const filteredAdmins = pageData?.leadership_tree ? filterNodes(pageData.leadership_tree.administrations) : [];
+
   return (
     <div style={{ paddingBottom: 80 }}>
       {/* Hero */}
@@ -697,18 +741,23 @@ const About = () => {
         {pageData?.leadership_tree && (
           <div style={{ marginBottom: '5rem', direction: 'rtl' }}>
 
-            {/* Header Banner Frame (كادر فاخر مخصص لعنوان القيادة فقط بطابع عمراني) */}
-            <div style={{
-              background: 'linear-gradient(135deg, #001225 0%, #001d5a 40%, #003087 80%, #0066cc 100%)',
-              borderRadius: 24,
-              padding: '40px 30px',
-              textAlign: 'center',
-              position: 'relative',
-              overflow: 'hidden',
-              boxShadow: '0 12px 35px rgba(0, 30, 90, 0.22)',
-              border: '1px solid rgba(0, 168, 232, 0.35)',
-              marginBottom: '2.5rem',
-            }}>
+            {/* Header Banner Frame (كادر فاخر مخصص لعنوان القيادة بطابع عمراني وتفاعلي) */}
+            <motion.div 
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              style={{
+                background: 'linear-gradient(135deg, #001225 0%, #001d5a 40%, #003087 80%, #0066cc 100%)',
+                borderRadius: 24,
+                padding: '40px 30px',
+                textAlign: 'center',
+                position: 'relative',
+                overflow: 'hidden',
+                boxShadow: '0 16px 40px rgba(0, 30, 90, 0.25)',
+                border: '1px solid rgba(0, 168, 232, 0.35)',
+                marginBottom: '2.5rem',
+              }}
+            >
               {/* Urban Blueprint Grid Overlay */}
               <div style={{
                 position: 'absolute', inset: 0,
@@ -719,7 +768,7 @@ const About = () => {
               }} />
               <div style={{
                 position: 'absolute', top: -80, left: '50%', transform: 'translateX(-50%)',
-                width: 400, height: 400,
+                width: 450, height: 450,
                 background: 'radial-gradient(circle, rgba(0, 168, 232, 0.25) 0%, transparent 70%)',
                 pointerEvents: 'none'
               }} />
@@ -741,17 +790,110 @@ const About = () => {
                 }}>
                   <FaIcons.FaUsers size={14} /> {t('about.leadershipTag')}
                 </div>
+                
                 <h2 style={{ color: '#ffffff', fontWeight: 900, fontSize: 'clamp(1.8rem, 3.5vw, 2.5rem)', margin: '0 0 10px', textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
                   {t('about.leadershipTitle')}
                 </h2>
-                <div style={{ width: 70, height: 4, background: 'linear-gradient(90deg, #38bdf8 0%, #00a8e8 100%)', borderRadius: 99, margin: '0 auto' }} />
+                
+                <div style={{ width: 70, height: 4, background: 'linear-gradient(90deg, #38bdf8 0%, #00a8e8 100%)', borderRadius: 99, margin: '0 auto 20px' }} />
+
+                {/* Interactive Summary Chips */}
+                <div className="d-flex flex-wrap align-items-center justify-content-center gap-3">
+                  <div style={{
+                    background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
+                    padding: '6px 16px', borderRadius: 99, color: '#fff', fontSize: '0.82rem', fontWeight: 700,
+                    display: 'flex', alignItems: 'center', gap: 6, backdropFilter: 'blur(8px)'
+                  }}>
+                    <FaIcons.FaUserTie size={12} color="#38bdf8" />
+                    <span>{isRtl ? 'رئيس الهيئة' : 'Head of Authority'}</span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => { setViewMode('scroll'); setScrollState(1); }}
+                    style={{
+                      background: 'rgba(14, 165, 233, 0.2)', border: '1px solid rgba(14, 165, 233, 0.4)',
+                      padding: '6px 16px', borderRadius: 99, color: '#38bdf8', fontSize: '0.82rem', fontWeight: 700,
+                      display: 'flex', alignItems: 'center', gap: 6, backdropFilter: 'blur(8px)', cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <FaIcons.FaBriefcase size={12} />
+                    <span>{(pageData.leadership_tree.offices || []).length} {isRtl ? 'مكاتب تابعة' : 'Offices'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => { setViewMode('scroll'); setScrollState(2); }}
+                    style={{
+                      background: 'rgba(0, 48, 135, 0.4)', border: '1px solid rgba(0, 168, 232, 0.4)',
+                      padding: '6px 16px', borderRadius: 99, color: '#fff', fontSize: '0.82rem', fontWeight: 700,
+                      display: 'flex', alignItems: 'center', gap: 6, backdropFilter: 'blur(8px)', cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <FaIcons.FaLandmark size={12} color="#38bdf8" />
+                    <span>{(pageData.leadership_tree.administrations || []).length} {isRtl ? 'إدارات رئيسية' : 'Administrations'}</span>
+                  </button>
+                </div>
               </div>
+            </motion.div>
+
+            {/* Interactive Control Bar: Search & View Mode Switcher */}
+            <div className="d-flex flex-column flex-md-row align-items-center justify-content-between gap-3 mb-4 px-2">
+              {/* Search Bar */}
+              <div style={{ width: '100%', maxWidth: 420 }}>
+                <InputGroup className="shadow-sm rounded-pill overflow-hidden border">
+                  <InputGroup.Text style={{ background: 'var(--card-bg)', border: 'none', color: 'var(--text-muted)' }}>
+                    <FaIcons.FaSearch size={14} />
+                  </InputGroup.Text>
+                  <Form.Control
+                    type="text"
+                    placeholder={isRtl ? 'ابحث عن مكتب، إدارة، أو اسم مدير...' : 'Search offices, admins, or directors...'}
+                    value={treeSearchQuery}
+                    onChange={(e) => setTreeSearchQuery(e.target.value)}
+                    style={{ background: 'var(--card-bg)', border: 'none', color: 'var(--text)', boxShadow: 'none', fontSize: '0.9rem' }}
+                  />
+                  {treeSearchQuery && (
+                    <InputGroup.Text 
+                      onClick={() => setTreeSearchQuery('')}
+                      style={{ background: 'var(--card-bg)', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                    >
+                      <FaIcons.FaTimes size={12} />
+                    </InputGroup.Text>
+                  )}
+                </InputGroup>
+              </div>
+
+              {/* View Mode Toggle Switch (Interactive Scroll vs Full Grid) */}
+              {isLargeScreen && (
+                <div className="d-flex align-items-center gap-2 p-1 border rounded-pill bg-body-tertiary shadow-sm">
+                  <Button
+                    variant={viewMode === 'scroll' ? 'primary' : 'light'}
+                    size="sm"
+                    className="rounded-pill px-3 py-1 fw-bold fs-7 d-flex align-items-center gap-2"
+                    onClick={() => setViewMode('scroll')}
+                  >
+                    <FaIcons.FaMagic size={12} />
+                    <span>{isRtl ? 'عرض تفاعلي بالتمرير' : 'Scroll View'}</span>
+                  </Button>
+                  <Button
+                    variant={viewMode === 'grid' ? 'primary' : 'light'}
+                    size="sm"
+                    className="rounded-pill px-3 py-1 fw-bold fs-7 d-flex align-items-center gap-2"
+                    onClick={() => setViewMode('grid')}
+                  >
+                    <FaIcons.FaThLarge size={12} />
+                    <span>{isRtl ? 'عرض كلي شامل' : 'Full Map'}</span>
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Leadership Tree Content Outside Frame */}
-            {isLargeScreen ? (
+            {isLargeScreen && viewMode === 'scroll' ? (
               /* --- Desktop Interactive Scroll-Driven Org Chart --- */
-              <div ref={treeContainerRef} style={{ position: 'relative', height: '200vh', marginTop: 20 }}>
+              <div ref={treeContainerRef} style={{ position: 'relative', height: '200vh', marginTop: 10 }}>
                 <div style={{
                   position: 'sticky',
                   top: 85,
@@ -768,11 +910,11 @@ const About = () => {
                   {/* Level 1: President Card */}
                   {renderPresidentCard(pageData.leadership_tree.president)}
 
-                  {/* SVG Branch Connector */}
-                  <div style={{ width: '100%', height: 28, position: 'relative', flexShrink: 0 }}>
-                    <svg width="100%" height="28" style={{ overflow: 'visible', pointerEvents: 'none' }}>
+                  {/* SVG Animated Branch Connector with Laser Line Pulse */}
+                  <div style={{ width: '100%', height: 30, position: 'relative', flexShrink: 0 }}>
+                    <svg width="100%" height="30" style={{ overflow: 'visible', pointerEvents: 'none' }}>
                       <motion.path
-                        d="M 50% 0 L 50% 28"
+                        d="M 50% 0 L 50% 30"
                         stroke="var(--primary)"
                         strokeWidth="3"
                         fill="none"
@@ -780,6 +922,9 @@ const About = () => {
                         animate={{ pathLength: 1 }}
                         transition={{ duration: 0.5 }}
                       />
+                      <circle r="4" fill="#0ea5e9">
+                        <animateMotion path="M 50% 0 L 50% 30" dur="1.8s" repeatCount="indefinite" />
+                      </circle>
                     </svg>
                   </div>
 
@@ -805,7 +950,7 @@ const About = () => {
                       }}
                     >
                       <FaIcons.FaBriefcase size={13} />
-                      <span>{isRtl ? 'المكاتب التابعة' : 'Offices'} ({(pageData.leadership_tree.offices || []).length})</span>
+                      <span>{isRtl ? 'المكاتب التابعة' : 'Offices'} ({filteredOffices.length})</span>
                     </button>
 
                     <button
@@ -828,14 +973,14 @@ const About = () => {
                       }}
                     >
                       <FaIcons.FaLandmark size={13} />
-                      <span>{isRtl ? 'الإدارات الرئيسية' : 'Administrations'} ({(pageData.leadership_tree.administrations || []).length})</span>
+                      <span>{isRtl ? 'الإدارات الرئيسية' : 'Administrations'} ({filteredAdmins.length})</span>
                     </button>
                   </div>
 
                   {/* Level 2 & 3: Offices (scrollState < 2) → Administrations (scrollState === 2) */}
                   <div className="w-100 px-3" style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
                     <AnimatePresence mode="wait">
-                      {/* Offices View (Disappears smoothly when scrolling down to scrollState === 2) */}
+                      {/* Offices View */}
                       {scrollState < 2 && (
                         <motion.div
                           key="offices-view"
@@ -850,14 +995,20 @@ const About = () => {
                             overflowY: 'auto',
                             padding: '4px 8px'
                           }} className="about-admin-scroll">
-                            <Row className="g-3 row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-3">
-                              {(pageData.leadership_tree.offices || []).map((o, i) => renderTreeCard(o, i, 'office'))}
-                            </Row>
+                            {filteredOffices.length > 0 ? (
+                              <Row className="g-3 row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-3">
+                                {filteredOffices.map((o, i) => renderTreeCard(o, i, 'office'))}
+                              </Row>
+                            ) : (
+                              <div className="text-center py-5 text-muted fs-7">
+                                {isRtl ? 'لا توجد نتائج مطابقة للبحث' : 'No matching offices found'}
+                              </div>
+                            )}
                           </div>
                         </motion.div>
                       )}
 
-                      {/* Administrations View (Appears smoothly when scrolling down to scrollState === 2) */}
+                      {/* Administrations View */}
                       {scrollState === 2 && (
                         <motion.div
                           key="admins-view"
@@ -872,14 +1023,49 @@ const About = () => {
                             overflowY: 'auto',
                             padding: '4px 8px'
                           }} className="about-admin-scroll">
-                            <Row className="g-3 row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-3">
-                              {(pageData.leadership_tree.administrations || []).map((a, i) => renderTreeCard(a, i, 'admin'))}
-                            </Row>
+                            {filteredAdmins.length > 0 ? (
+                              <Row className="g-3 row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-3">
+                                {filteredAdmins.map((a, i) => renderTreeCard(a, i, 'admin'))}
+                              </Row>
+                            ) : (
+                              <div className="text-center py-5 text-muted fs-7">
+                                {isRtl ? 'لا توجد نتائج مطابقة للبحث' : 'No matching administrations found'}
+                              </div>
+                            )}
                           </div>
                         </motion.div>
                       )}
                     </AnimatePresence>
                   </div>
+                </div>
+              </div>
+            ) : viewMode === 'grid' && isLargeScreen ? (
+              /* --- Full Grid View (Shows everything at once) --- */
+              <div className="p-4 border rounded-4 bg-body-tertiary shadow-sm">
+                <div className="d-flex justify-content-center mb-5">
+                  {renderPresidentCard(pageData.leadership_tree.president)}
+                </div>
+
+                {/* Offices Section */}
+                <div className="mb-5">
+                  <h5 className="fw-extrabold mb-3 d-flex align-items-center gap-2 text-primary">
+                    <FaIcons.FaBriefcase size={16} />
+                    <span>{isRtl ? 'المكاتب التابعة لرئيس الهيئة' : 'Offices'} ({filteredOffices.length})</span>
+                  </h5>
+                  <Row className="g-3 row-cols-1 row-cols-md-2 row-cols-lg-3">
+                    {filteredOffices.map((o, i) => renderTreeCard(o, i, 'office'))}
+                  </Row>
+                </div>
+
+                {/* Administrations Section */}
+                <div>
+                  <h5 className="fw-extrabold mb-3 d-flex align-items-center gap-2 text-primary">
+                    <FaIcons.FaLandmark size={16} />
+                    <span>{isRtl ? 'الإدارات الرئيسية للهيئة' : 'Administrations'} ({filteredAdmins.length})</span>
+                  </h5>
+                  <Row className="g-3 row-cols-1 row-cols-md-2 row-cols-lg-3">
+                    {filteredAdmins.map((a, i) => renderTreeCard(a, i, 'admin'))}
+                  </Row>
                 </div>
               </div>
             ) : (
@@ -898,7 +1084,7 @@ const About = () => {
                     onClick={() => setMobileActiveLevel('offices')}
                   >
                     <FaIcons.FaBriefcase size={14} />
-                    <span>{isRtl ? 'المكاتب التابعة' : 'Offices'} ({(pageData.leadership_tree.offices || []).length})</span>
+                    <span>{isRtl ? 'المكاتب التابعة' : 'Offices'} ({filteredOffices.length})</span>
                   </Button>
                   <Button
                     variant={mobileActiveLevel === 'admins' ? 'primary' : 'outline-secondary'}
@@ -906,7 +1092,7 @@ const About = () => {
                     onClick={() => setMobileActiveLevel('admins')}
                   >
                     <FaIcons.FaLandmark size={14} />
-                    <span>{isRtl ? 'الإدارات' : 'Administrations'} ({(pageData.leadership_tree.administrations || []).length})</span>
+                    <span>{isRtl ? 'الإدارات' : 'Administrations'} ({filteredAdmins.length})</span>
                   </Button>
                 </div>
 
@@ -914,11 +1100,11 @@ const About = () => {
                 <div className="px-1 pb-3">
                   {mobileActiveLevel === 'offices' ? (
                     <Row className="g-3 row-cols-1 row-cols-sm-2">
-                      {(pageData.leadership_tree.offices || []).map((o, i) => renderTreeCard(o, i, 'office'))}
+                      {filteredOffices.map((o, i) => renderTreeCard(o, i, 'office'))}
                     </Row>
                   ) : (
                     <Row className="g-3 row-cols-1 row-cols-sm-2">
-                      {(pageData.leadership_tree.administrations || []).map((a, i) => renderTreeCard(a, i, 'admin'))}
+                      {filteredAdmins.map((a, i) => renderTreeCard(a, i, 'admin'))}
                     </Row>
                   )}
                 </div>
@@ -952,6 +1138,104 @@ const About = () => {
           </div>
         </div>
       </Container>
+
+      {/* Interactive Detail Modal for clicked Office / Administration / President */}
+      <AnimatePresence>
+        {selectedNodeModal && (
+          <Modal
+            show={!!selectedNodeModal}
+            onHide={() => setSelectedNodeModal(null)}
+            centered
+            size="lg"
+            contentClassName="border-0 rounded-4 shadow-lg overflow-hidden"
+          >
+            <div style={{
+              background: selectedNodeModal.type === 'office'
+                ? 'linear-gradient(135deg, #001225 0%, #0284c7 100%)'
+                : 'linear-gradient(135deg, #001225 0%, #003087 100%)',
+              padding: '24px 28px',
+              color: '#fff',
+              position: 'relative'
+            }}>
+              <button
+                onClick={() => setSelectedNodeModal(null)}
+                style={{
+                  position: 'absolute', top: 16, [isRtl ? 'left' : 'right']: 16,
+                  background: 'rgba(255,255,255,0.15)', border: 'none',
+                  color: '#fff', width: 32, height: 32, borderRadius: '50%',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer'
+                }}
+              >
+                <FaIcons.FaTimes size={14} />
+              </button>
+
+              <div className="d-flex align-items-center gap-3">
+                <div style={{
+                  width: 60, height: 60, borderRadius: '50%', overflow: 'hidden',
+                  border: '2px solid rgba(255,255,255,0.8)',
+                  background: 'rgba(255,255,255,0.1)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  {selectedNodeModal.img ? (
+                    <img src={selectedNodeModal.img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <FaIcons.FaUserTie size={28} color="#fff" />
+                  )}
+                </div>
+                <div>
+                  <h4 style={{ fontWeight: 800, margin: 0 }}>
+                    {isRtl ? selectedNodeModal.title_ar : selectedNodeModal.title_en}
+                  </h4>
+                  <div style={{ fontSize: '0.88rem', opacity: 0.85, marginTop: 4 }}>
+                    {selectedNodeModal.type === 'president' ? (isRtl ? 'رئاسة الهيئة' : 'Authority Head') : selectedNodeModal.type === 'office' ? (isRtl ? 'مكتب تابع لرئيس الهيئة' : 'Office') : (isRtl ? 'إدارة رئيسية' : 'Administration')}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Modal.Body className="p-4" style={{ background: 'var(--card-bg)', color: 'var(--text)' }}>
+              <div className="mb-4">
+                <h6 className="fw-extrabold text-primary mb-2">
+                  <FaIcons.FaUserTie className="me-2 ms-2" />
+                  {isRtl ? 'مسؤول الإدارة / المكتب' : 'Department Manager'}
+                </h6>
+                <p style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--text)' }}>
+                  {selectedNodeModal.name_ar 
+                    ? (isRtl ? selectedNodeModal.name_ar : selectedNodeModal.name_en) 
+                    : (isRtl ? 'لم يُعيَّن مدير رسمياً بعد' : 'No Director Assigned Yet')}
+                </p>
+              </div>
+
+              <div className="mb-4">
+                <h6 className="fw-extrabold text-primary mb-2">
+                  <FaIcons.FaBullseye className="me-2 ms-2" />
+                  {isRtl ? 'مهام واختصاصات التخطيط العمراني' : 'Department Objectives'}
+                </h6>
+                <p style={{ color: 'var(--text-muted)', lineHeight: 1.7, fontSize: '0.92rem' }}>
+                  {isRtl
+                    ? `تختص ${selectedNodeModal.title_ar} بإعداد الخطط والدراسات التخطيطية الهندسية، والإشراف الفني المباشر، وتوثيق البيانات التخطيطية المعتمدة وفق أعلى معايير الجودة والمواصفات القياسية للهيئة الوطنية للتخطيط العمراني.`
+                    : `Responsible for physical and urban planning studies, technical supervision, and data documentation according to the official standards of UPAW.`}
+                </p>
+              </div>
+
+              <div className="d-flex justify-content-end gap-2 pt-2 border-top">
+                <Button 
+                  variant="outline-secondary" 
+                  className="rounded-pill px-4"
+                  onClick={() => setSelectedNodeModal(null)}
+                >
+                  {isRtl ? 'إغلاق' : 'Close'}
+                </Button>
+                <PrimaryButton to="/contact" variant="primary" style={{ padding: '6px 20px', borderRadius: 99 }}>
+                  <FaIcons.FaEnvelope size={12} />
+                  <span>{isRtl ? 'تواصل مع الإدارة' : 'Contact Department'}</span>
+                </PrimaryButton>
+              </div>
+            </Modal.Body>
+          </Modal>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

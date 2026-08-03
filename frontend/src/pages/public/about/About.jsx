@@ -737,17 +737,59 @@ const About = () => {
                 
                 <div style={{ width: 70, height: 4, background: 'linear-gradient(90deg, #38bdf8 0%, #00a8e8 100%)', borderRadius: 99, margin: '0 auto 20px' }} />
 
-                {/* Sleek Summary Chip */}
-                <div className="d-flex align-items-center justify-content-center">
+                {/* 3 Dynamic Summary Chips: Offices | President | Administrations */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, flexWrap: 'wrap' }}>
+                  {/* Offices chip – RIGHT */}
                   <div style={{
-                    background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
-                    padding: '8px 24px', borderRadius: 99, color: '#fff', fontSize: '0.88rem', fontWeight: 800,
-                    display: 'inline-flex', alignItems: 'center', gap: 8, boxShadow: '0 4px 14px rgba(14,165,233,0.35)'
+                    background: 'linear-gradient(135deg, rgba(14,165,233,0.25) 0%, rgba(2,132,199,0.15) 100%)',
+                    border: '1px solid rgba(14,165,233,0.5)',
+                    padding: '10px 22px', borderRadius: 14,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                    backdropFilter: 'blur(10px)', minWidth: 120
                   }}>
-                    <FaIcons.FaUserTie size={14} color="#fff" />
-                    <span>{isRtl ? 'رئيس الهيئة' : 'Head of Authority'}</span>
+                    <FaIcons.FaBriefcase size={18} color="#38bdf8" />
+                    <span style={{ color: '#fff', fontSize: '1.5rem', fontWeight: 900, lineHeight: 1 }}>
+                      {(pageData.leadership_tree.offices || []).length}
+                    </span>
+                    <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.75rem', fontWeight: 700 }}>
+                      {isRtl ? 'مكتب تابع' : 'Offices'}
+                    </span>
+                  </div>
+
+                  {/* President chip – CENTER */}
+                  <div style={{
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.08) 100%)',
+                    border: '1px solid rgba(255,255,255,0.35)',
+                    padding: '10px 22px', borderRadius: 14,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                    backdropFilter: 'blur(10px)', minWidth: 120,
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.15)'
+                  }}>
+                    <FaIcons.FaUserTie size={18} color="#fff" />
+                    <span style={{ color: '#fff', fontSize: '1.5rem', fontWeight: 900, lineHeight: 1 }}>1</span>
+                    <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.75rem', fontWeight: 700 }}>
+                      {isRtl ? 'رئيس الهيئة' : 'Head of Auth.'}
+                    </span>
+                  </div>
+
+                  {/* Administrations chip – LEFT */}
+                  <div style={{
+                    background: 'linear-gradient(135deg, rgba(0,48,135,0.4) 0%, rgba(0,29,90,0.3) 100%)',
+                    border: '1px solid rgba(0,168,232,0.4)',
+                    padding: '10px 22px', borderRadius: 14,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                    backdropFilter: 'blur(10px)', minWidth: 120
+                  }}>
+                    <FaIcons.FaLandmark size={18} color="#38bdf8" />
+                    <span style={{ color: '#fff', fontSize: '1.5rem', fontWeight: 900, lineHeight: 1 }}>
+                      {(pageData.leadership_tree.administrations || []).length}
+                    </span>
+                    <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.75rem', fontWeight: 700 }}>
+                      {isRtl ? 'إدارة رئيسية' : 'Administrations'}
+                    </span>
                   </div>
                 </div>
+
               </div>
             </motion.div>
 

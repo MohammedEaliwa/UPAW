@@ -7,6 +7,7 @@ import { api } from '../../../services/api';
 import { UPLOADS_URL } from '../../../config/apiEndpoints';
 import PrimaryButton from '../../../components/ui/PrimaryButton';
 import './about.css';
+
 const About = () => {
   const { locale, t } = useLanguage();
   const isRtl = locale === 'ar';
@@ -91,68 +92,52 @@ const About = () => {
     const ar = (titleAr || '').toLowerCase();
     const en = (titleEn || '').toLowerCase();
 
-    // 1. National Plan / الخطة الوطنية
     if (ar.includes('خطة وطنية') || ar.includes('الخطة الوطنية') || en.includes('national plan')) {
       return FaIcons.FaProjectDiagram;
     }
-    // 2. GIS / نظم المعلومات الجغرافية / توثيق
     if (ar.includes('جغرافية') || ar.includes('جغرافي') || en.includes('gis') || en.includes('geographic') || ar.includes('توثيق') || en.includes('documentation')) {
       return FaIcons.FaMapMarkedAlt;
     }
-    // 3. Legal / قانونية
     if (ar.includes('قانون') || ar.includes('تشريع') || en.includes('legal') || en.includes('law')) {
       return FaIcons.FaBalanceScale;
     }
-    // 4. HR / الموارد البشرية / شؤون الموظفين
     if (ar.includes('موارد بشرية') || ar.includes('موظف') || en.includes('hr') || en.includes('human resource') || en.includes('personnel')) {
       return FaIcons.FaUsers;
     }
-    // 5. Physical Planning / تخطيط طبيعي
     if (ar.includes('طبيعي') || en.includes('physical')) {
       return FaIcons.FaDraftingCompass;
     }
-    // 6. Urban Planning / تخطيط حضري / مدن
     if (ar.includes('حضري') || en.includes('urban') || ar.includes('مدن') || en.includes('city') || en.includes('cities')) {
       return FaIcons.FaCity;
     }
-    // 7. Branches / فروع
     if (ar.includes('فرع') || ar.includes('فروع') || en.includes('branch') || en.includes('network')) {
       return FaIcons.FaNetworkWired;
     }
-    // 8. Audit / مراجعة داخلية / رقابة
     if (ar.includes('مراجعة') || ar.includes('رقاب') || en.includes('audit') || en.includes('control')) {
       return FaIcons.FaClipboardCheck;
     }
-    // 9. Inspection / تفتيش
     if (ar.includes('تفتيش') || en.includes('inspection')) {
       return FaIcons.FaSearch;
     }
-    // 10. International / تعاون دولي
     if (ar.includes('دولي') || ar.includes('خارجي') || en.includes('international') || en.includes('cooperation')) {
       return FaIcons.FaGlobe;
     }
-    // 11. Follow-up / متابعة تنفيذية
     if (ar.includes('متابعة') || en.includes('follow') || en.includes('monitor')) {
       return FaIcons.FaTasks;
     }
-    // 12. Construction / مشروعات الانشاءات / صيانة
     if (ar.includes('انشاء') || ar.includes('صيان') || ar.includes('مشروع') || en.includes('construction') || en.includes('maintenance') || en.includes('project')) {
       return FaIcons.FaHammer;
     }
-    // 13. Finance / مالية / حسابات / ميزانية
     if (ar.includes('مالية') || ar.includes('حساب') || ar.includes('ميزان') || en.includes('financ') || en.includes('budget') || en.includes('account')) {
       return FaIcons.FaMoneyBillWave;
     }
-    // 14. President / رئيس
     if (ar.includes('رئيس') || en.includes('president') || en.includes('head')) {
       return FaIcons.FaUserTie;
     }
-    // 15. Administrative / إدارة عامة / شؤون إدارية
     if (ar.includes('إدارية') || ar.includes('ادارية') || en.includes('admin')) {
       return FaIcons.FaCogs;
     }
 
-    // Default fallback icon
     return FaIcons.FaLandmark;
   };
 
@@ -183,7 +168,6 @@ const About = () => {
       
     const directorNameColor = isOffice ? '#0284c7' : '#003087';
 
-    // Get department representative icon
     const DeptIcon = getNodeIcon(node.title_ar, node.title_en);
 
     return (
@@ -216,7 +200,7 @@ const About = () => {
             borderRadius: isRtl ? '0 16px 16px 0' : '16px 0 0 16px',
           }} />
 
-          {/* Avatar / Director Photo (Circular) */}
+          {/* Avatar / Director Photo */}
           <div style={{
             width: 68, flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -244,7 +228,6 @@ const About = () => {
             display: 'flex', flexDirection: 'column', justifyContent: 'center',
             textAlign: isRtl ? 'right' : 'left',
           }}>
-            {/* Title + Representative Department Icon */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -325,7 +308,6 @@ const About = () => {
         position: 'relative',
         zIndex: 10,
       }}>
-        {/* Image */}
         <div style={{ width: '100%', height: 220, position: 'relative', overflow: 'hidden', background: 'linear-gradient(135deg, #001225 0%, #003087 100%)' }}>
           {node.img ? (
             <img
@@ -340,7 +322,6 @@ const About = () => {
           )}
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,20,70,0.6) 0%, transparent 55%)' }} />
         </div>
-        {/* Info */}
         <div style={{ padding: '16px 16px 20px', background: 'var(--card-bg)' }}>
           <h5 style={{ fontWeight: 900, color: 'var(--text)', margin: '0 0 8px', fontSize: '1.08rem' }}>
             {isRtl ? node.name_ar : node.name_en}
@@ -603,14 +584,12 @@ const About = () => {
         {/* Dynamic Content from Database / Skeleton Loader */}
         {!pageData ? (
           <div>
-            {/* Introduction Card Skeleton */}
             <Row className="g-4 mb-5">
               <Col lg={12}>
                 <div className="card-custom p-5 skeleton-pulse" style={{ height: 280 }} />
               </Col>
             </Row>
 
-            {/* Tasks Section Skeleton */}
             <div style={{ marginBottom: '4rem' }}>
               <div className="text-center mb-5">
                 <div className="skeleton-pulse mx-auto" style={{ width: 140, height: 24, marginBottom: 12, borderRadius: 99 }} />
@@ -624,18 +603,6 @@ const About = () => {
                   </Col>
                 ))}
               </Row>
-            </div>
-
-            {/* Tree Section Skeleton */}
-            <div style={{ marginBottom: '5rem' }}>
-              <div className="text-center mb-5">
-                <div className="skeleton-pulse mx-auto" style={{ width: 140, height: 24, marginBottom: 12, borderRadius: 99 }} />
-                <div className="skeleton-pulse mx-auto" style={{ width: 220, height: 36, marginBottom: 12 }} />
-                <div className="skeleton-pulse mx-auto" style={{ width: 60, height: 4 }} />
-              </div>
-              <div className="d-flex justify-content-center mb-5">
-                <div className="skeleton-pulse" style={{ width: 280, height: 380, borderRadius: 24 }} />
-              </div>
             </div>
           </div>
         ) : (
@@ -655,7 +622,6 @@ const About = () => {
             </Col>
           </Row>
         )}
-
 
         {/* Dynamic Sections */}
         {pageData?.sections && pageData.sections.length > 0 && (
@@ -727,7 +693,7 @@ const About = () => {
           </div>
         )}
 
-        {/* Leadership Tree Section (Rendered BELOW the tasks section) */}
+        {/* Leadership Tree Section (Dynamic & Fully Responsive for 7+ items) */}
         {pageData?.leadership_tree && (
           <div style={{ marginBottom: '5rem', direction: 'rtl' }}>
             <div className="text-center mb-5">
@@ -736,22 +702,17 @@ const About = () => {
               </div>
               <h2 className="section-title">{t('about.leadershipTitle')}</h2>
               <div className="section-divider mx-auto" />
-
             </div>
 
             {isLargeScreen ? (
-              /* --- Desktop Scroll-driven Tree --- */
-              <div ref={treeContainerRef} style={{ position: 'relative', height: '200vh', marginTop: 30 }}>
+              /* --- Desktop Responsive Org Chart --- */
+              <div ref={treeContainerRef} style={{ position: 'relative', minHeight: 'auto', marginTop: 30 }}>
                 <div style={{
-                  position: 'sticky',
-                  top: 90,
-                  height: '80vh',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'flex-start',
-                  overflow: 'hidden',
-                  padding: '20px 0'
+                  padding: '10px 0 20px'
                 }}>
                   {/* Level 1: President */}
                   {renderPresidentCard(pageData.leadership_tree.president)}
@@ -771,120 +732,99 @@ const About = () => {
                     </svg>
                   </div>
 
-                  {/* Level 2 & 3: Offices → Administrations */}
-                  <div className="w-100 px-3" style={{ flex: 1, overflow: 'hidden', display: 'flex', alignItems: 'flex-start' }}>
-                    <AnimatePresence mode="wait">
-                      {/* Offices: show when scrollState is 0 or 1 (default & early scroll) */}
-                      {scrollState < 2 && (
-                        <motion.div
-                          key="offices"
-                          initial={{ opacity: 0, y: 24 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -24 }}
-                          transition={{ duration: 0.4 }}
-                          className="w-100"
-                        >
-                          {/* Section Header */}
+                  {/* Level 2 & 3: Offices & Administrations */}
+                  <div className="w-100 px-2">
+                    {/* Offices Section */}
+                    {(pageData.leadership_tree.offices || []).length > 0 && (
+                      <div className="mb-5">
+                        <div style={{
+                          display: 'flex', alignItems: 'center', gap: 12,
+                          marginBottom: 20,
+                          direction: isRtl ? 'rtl' : 'ltr',
+                        }}>
                           <div style={{
-                            display: 'flex', alignItems: 'center', gap: 12,
-                            marginBottom: 16,
-                            direction: isRtl ? 'rtl' : 'ltr',
+                            width: 40, height: 40, borderRadius: 12, flexShrink: 0,
+                            background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            boxShadow: '0 4px 12px rgba(14,165,233,0.35)',
                           }}>
+                            <FaIcons.FaBriefcase size={17} color="#fff" />
+                          </div>
+                          <div style={{ flex: 1 }}>
                             <div style={{
-                              width: 40, height: 40, borderRadius: 12, flexShrink: 0,
+                              fontSize: '1.05rem', fontWeight: 800,
                               background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              boxShadow: '0 4px 12px rgba(14,165,233,0.35)',
+                              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                              lineHeight: 1.2,
                             }}>
-                              <FaIcons.FaBriefcase size={17} color="#fff" />
+                              {isRtl ? 'المكاتب التابعة لرئيس الهيئة' : 'Offices Reporting to Head'}
                             </div>
-                            <div style={{ flex: 1 }}>
-                              <div style={{
-                                fontSize: '1rem', fontWeight: 800,
-                                background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
-                                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-                                lineHeight: 1.2,
-                              }}>
-                                {isRtl ? 'المكاتب التابعة لرئيس الهيئة' : 'Offices Reporting to Head'}
-                              </div>
-                              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>
-                                {isRtl
-                                  ? `${(pageData.leadership_tree.offices || []).length} مكتب`
-                                  : `${(pageData.leadership_tree.offices || []).length} offices`}
-                              </div>
+                            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                              {isRtl
+                                ? `${(pageData.leadership_tree.offices || []).length} مكتب`
+                                : `${(pageData.leadership_tree.offices || []).length} offices`}
                             </div>
-                            <div style={{
-                              height: 2, flex: 2,
-                              background: 'linear-gradient(90deg, rgba(14,165,233,0.4) 0%, transparent 100%)',
-                              borderRadius: 99,
-                            }} />
                           </div>
-                          <Row className="g-2 row-cols-1 row-cols-md-2 row-cols-lg-2">
-                            {(pageData.leadership_tree.offices || []).map((o, i) => renderTreeCard(o, i, 'office'))}
-                          </Row>
-                        </motion.div>
-                      )}
-
-                      {/* Administrations: show when scrolled down enough (scrollState === 2) */}
-                      {scrollState === 2 && (
-                        <motion.div
-                          key="admins"
-                          initial={{ opacity: 0, y: 24 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -24 }}
-                          transition={{ duration: 0.4 }}
-                          className="w-100"
-                        >
-                          {/* Section Header */}
                           <div style={{
-                            display: 'flex', alignItems: 'center', gap: 12,
-                            marginBottom: 16,
-                            direction: isRtl ? 'rtl' : 'ltr',
+                            height: 2, flex: 2,
+                            background: 'linear-gradient(90deg, rgba(14,165,233,0.4) 0%, transparent 100%)',
+                            borderRadius: 99,
+                          }} />
+                        </div>
+                        <Row className="g-3 row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-3">
+                          {(pageData.leadership_tree.offices || []).map((o, i) => renderTreeCard(o, i, 'office'))}
+                        </Row>
+                      </div>
+                    )}
+
+                    {/* Administrations Section */}
+                    {(pageData.leadership_tree.administrations || []).length > 0 && (
+                      <div className="mb-4">
+                        <div style={{
+                          display: 'flex', alignItems: 'center', gap: 12,
+                          marginBottom: 20,
+                          direction: isRtl ? 'rtl' : 'ltr',
+                        }}>
+                          <div style={{
+                            width: 40, height: 40, borderRadius: 12, flexShrink: 0,
+                            background: 'linear-gradient(135deg, #003087 0%, #001d5a 100%)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            boxShadow: '0 4px 12px rgba(0,48,135,0.35)',
                           }}>
-                            <div style={{
-                              width: 40, height: 40, borderRadius: 12, flexShrink: 0,
-                              background: 'linear-gradient(135deg, #003087 0%, #001d5a 100%)',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              boxShadow: '0 4px 12px rgba(0,48,135,0.35)',
-                            }}>
-                              <FaIcons.FaLandmark size={17} color="#fff" />
-                            </div>
-                            <div style={{ flex: 1 }}>
-                              <div style={{
-                                fontSize: '1rem', fontWeight: 800,
-                                background: 'linear-gradient(135deg, #003087 0%, #001d5a 100%)',
-                                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-                                lineHeight: 1.2,
-                              }}>
-                                {isRtl ? 'الإدارات الرئيسية للهيئة' : 'Main Administrations'}
-                              </div>
-                              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>
-                                {isRtl
-                                  ? `${(pageData.leadership_tree.administrations || []).length} إدارة`
-                                  : `${(pageData.leadership_tree.administrations || []).length} administrations`}
-                              </div>
-                            </div>
-                            <div style={{
-                              height: 2, flex: 2,
-                              background: 'linear-gradient(90deg, rgba(0,48,135,0.4) 0%, transparent 100%)',
-                              borderRadius: 99,
-                            }} />
+                            <FaIcons.FaLandmark size={17} color="#fff" />
                           </div>
-                          <Row
-                            className="g-2 row-cols-1 row-cols-md-2 row-cols-lg-3"
-                            style={{ maxHeight: '50vh', overflowY: 'auto', padding: '2px' }}
-                          >
-                            {(pageData.leadership_tree.administrations || []).map((a, i) => renderTreeCard(a, i, 'admin'))}
-                          </Row>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                          <div style={{ flex: 1 }}>
+                            <div style={{
+                              fontSize: '1.05rem', fontWeight: 800,
+                              background: 'linear-gradient(135deg, #003087 0%, #001d5a 100%)',
+                              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                              lineHeight: 1.2,
+                            }}>
+                              {isRtl ? 'الإدارات الرئيسية للهيئة' : 'Main Administrations'}
+                            </div>
+                            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                              {isRtl
+                                ? `${(pageData.leadership_tree.administrations || []).length} إدارة`
+                                : `${(pageData.leadership_tree.administrations || []).length} administrations`}
+                            </div>
+                          </div>
+                          <div style={{
+                            height: 2, flex: 2,
+                            background: 'linear-gradient(90deg, rgba(0,48,135,0.4) 0%, transparent 100%)',
+                            borderRadius: 99,
+                          }} />
+                        </div>
+                        <Row className="g-3 row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-3">
+                          {(pageData.leadership_tree.administrations || []).map((a, i) => renderTreeCard(a, i, 'admin'))}
+                        </Row>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
             ) : (
               /* --- Mobile Tabbed Org Chart --- */
-              <div className="p-2 border rounded-4 bg-light shadow-sm">
+              <div className="p-3 border rounded-4 bg-light shadow-sm">
                 {/* Level 1: President Card */}
                 <div className="d-flex justify-content-center mb-4 pt-3">
                   {renderPresidentCard(pageData.leadership_tree.president)}

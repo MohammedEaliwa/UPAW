@@ -1,5 +1,5 @@
 import React from 'react';
-import { Container, Row, Col, Button, Modal, Form, InputGroup } from 'react-bootstrap';
+import { Container, Row, Col, Button, Modal } from 'react-bootstrap';
 import { motion, AnimatePresence } from 'motion/react';
 import * as FaIcons from 'react-icons/fa';
 import { useLanguage } from '../../../context/LanguageContext';
@@ -15,12 +15,6 @@ const About = () => {
   const [pageData, setPageData] = React.useState(null);
   const [isLargeScreen, setIsLargeScreen] = React.useState(window.innerWidth >= 992);
   const [mobileActiveLevel, setMobileActiveLevel] = React.useState('offices'); // 'offices' | 'admins'
-  
-  // Interactive Tree Controls
-  const treeContainerRef = React.useRef(null);
-  const [scrollState, setScrollState] = React.useState(0); // 0: President, 1: Offices, 2: Administrations
-  const [viewMode, setViewMode] = React.useState('scroll'); // 'scroll' | 'grid'
-  const [treeSearchQuery, setTreeSearchQuery] = React.useState('');
   const [selectedNodeModal, setSelectedNodeModal] = React.useState(null);
 
   React.useEffect(() => {
@@ -53,39 +47,13 @@ const About = () => {
       setIsLargeScreen(window.innerWidth >= 992);
     };
 
-    const handleScroll = () => {
-      if (!treeContainerRef.current || viewMode !== 'scroll') return;
-      const rect = treeContainerRef.current.getBoundingClientRect();
-      const containerHeight = rect.height;
-      const visibleTop = rect.top;
-      
-      const viewportHeight = window.innerHeight;
-      const scrolled = -visibleTop;
-      const totalScrollRange = containerHeight - viewportHeight;
-      
-      if (totalScrollRange <= 0) return;
-      
-      let progress = scrolled / totalScrollRange;
-      progress = Math.max(0, Math.min(1, progress));
-      
-      if (progress < 0.25) {
-        setScrollState(0);
-      } else if (progress >= 0.25 && progress < 0.60) {
-        setScrollState(1);
-      } else {
-        setScrollState(2);
-      }
-    };
-
     window.addEventListener('resize', handleResize);
-    window.addEventListener('scroll', handleScroll);
     
     return () => {
       window.removeEventListener('upaw:data-updated', loadData);
       window.removeEventListener('resize', handleResize);
-      window.removeEventListener('scroll', handleScroll);
     };
-  }, [viewMode]);
+  }, []);
 
   const getDynamicIcon = (iconName) => {
     const Icon = FaIcons[iconName];
@@ -145,18 +113,6 @@ const About = () => {
     return FaIcons.FaLandmark;
   };
 
-  // Filter helper for tree search
-  const filterNodes = (nodes = []) => {
-    if (!treeSearchQuery.trim()) return nodes;
-    const q = treeSearchQuery.toLowerCase();
-    return nodes.filter(n => 
-      (n.title_ar && n.title_ar.toLowerCase().includes(q)) ||
-      (n.title_en && n.title_en.toLowerCase().includes(q)) ||
-      (n.name_ar && n.name_ar.toLowerCase().includes(q)) ||
-      (n.name_en && n.name_en.toLowerCase().includes(q))
-    );
-  };
-
   const renderTreeCard = (node, index = 0, type = 'office') => {
     if (!node) return null;
     
@@ -179,8 +135,8 @@ const About = () => {
       : 'linear-gradient(135deg, #003087 0%, #001d5a 100%)';
       
     const hoverShadowColor = isOffice
-      ? 'rgba(14,165,233,0.25)'
-      : 'rgba(0,48,135,0.28)';
+      ? 'rgba(14,165,233,0.22)'
+      : 'rgba(0,48,135,0.25)';
       
     const directorNameColor = isOffice ? '#0284c7' : '#003087';
 
@@ -310,19 +266,6 @@ const About = () => {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             {index + 1}
-          </div>
-
-          {/* Hover Action Icon */}
-          <div style={{
-            position: 'absolute',
-            bottom: 8,
-            [isRtl ? 'left' : 'right']: 10,
-            fontSize: '0.7rem',
-            color: themeColor,
-            opacity: 0.6,
-            display: 'flex', alignItems: 'center', gap: 3
-          }}>
-            <FaIcons.FaInfoCircle size={11} />
           </div>
         </motion.div>
       </Col>
@@ -598,9 +541,6 @@ const About = () => {
     }
   };
 
-  const filteredOffices = pageData?.leadership_tree ? filterNodes(pageData.leadership_tree.offices) : [];
-  const filteredAdmins = pageData?.leadership_tree ? filterNodes(pageData.leadership_tree.administrations) : [];
-
   return (
     <div style={{ paddingBottom: 80 }}>
       {/* Hero */}
@@ -741,7 +681,7 @@ const About = () => {
         {pageData?.leadership_tree && (
           <div style={{ marginBottom: '5rem', direction: 'rtl' }}>
 
-            {/* Header Banner Frame (كادر فاخر مخصص لعنوان القيادة بطابع عمراني وتفاعلي) */}
+            {/* Header Banner Frame (كادر فاخر مخصص لعنوان القيادة فقط بطابع عمراني) */}
             <motion.div 
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -755,7 +695,7 @@ const About = () => {
                 overflow: 'hidden',
                 boxShadow: '0 16px 40px rgba(0, 30, 90, 0.25)',
                 border: '1px solid rgba(0, 168, 232, 0.35)',
-                marginBottom: '2.5rem',
+                marginBottom: '3rem',
               }}
             >
               {/* Urban Blueprint Grid Overlay */}
@@ -797,276 +737,132 @@ const About = () => {
                 
                 <div style={{ width: 70, height: 4, background: 'linear-gradient(90deg, #38bdf8 0%, #00a8e8 100%)', borderRadius: 99, margin: '0 auto 20px' }} />
 
-                {/* Interactive Summary Chips */}
-                <div className="d-flex flex-wrap align-items-center justify-content-center gap-3">
+                {/* Sleek Summary Chip */}
+                <div className="d-flex align-items-center justify-content-center">
                   <div style={{
-                    background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
-                    padding: '6px 16px', borderRadius: 99, color: '#fff', fontSize: '0.82rem', fontWeight: 700,
-                    display: 'flex', alignItems: 'center', gap: 6, backdropFilter: 'blur(8px)'
+                    background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
+                    padding: '8px 24px', borderRadius: 99, color: '#fff', fontSize: '0.88rem', fontWeight: 800,
+                    display: 'inline-flex', alignItems: 'center', gap: 8, boxShadow: '0 4px 14px rgba(14,165,233,0.35)'
                   }}>
-                    <FaIcons.FaUserTie size={12} color="#38bdf8" />
+                    <FaIcons.FaUserTie size={14} color="#fff" />
                     <span>{isRtl ? 'رئيس الهيئة' : 'Head of Authority'}</span>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => { setViewMode('scroll'); setScrollState(1); }}
-                    style={{
-                      background: 'rgba(14, 165, 233, 0.2)', border: '1px solid rgba(14, 165, 233, 0.4)',
-                      padding: '6px 16px', borderRadius: 99, color: '#38bdf8', fontSize: '0.82rem', fontWeight: 700,
-                      display: 'flex', alignItems: 'center', gap: 6, backdropFilter: 'blur(8px)', cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    <FaIcons.FaBriefcase size={12} />
-                    <span>{(pageData.leadership_tree.offices || []).length} {isRtl ? 'مكاتب تابعة' : 'Offices'}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => { setViewMode('scroll'); setScrollState(2); }}
-                    style={{
-                      background: 'rgba(0, 48, 135, 0.4)', border: '1px solid rgba(0, 168, 232, 0.4)',
-                      padding: '6px 16px', borderRadius: 99, color: '#fff', fontSize: '0.82rem', fontWeight: 700,
-                      display: 'flex', alignItems: 'center', gap: 6, backdropFilter: 'blur(8px)', cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    <FaIcons.FaLandmark size={12} color="#38bdf8" />
-                    <span>{(pageData.leadership_tree.administrations || []).length} {isRtl ? 'إدارات رئيسية' : 'Administrations'}</span>
-                  </button>
                 </div>
               </div>
             </motion.div>
 
-            {/* Interactive Control Bar: Search & View Mode Switcher */}
-            <div className="d-flex flex-column flex-md-row align-items-center justify-content-between gap-3 mb-4 px-2">
-              {/* Search Bar */}
-              <div style={{ width: '100%', maxWidth: 420 }}>
-                <InputGroup className="shadow-sm rounded-pill overflow-hidden border">
-                  <InputGroup.Text style={{ background: 'var(--card-bg)', border: 'none', color: 'var(--text-muted)' }}>
-                    <FaIcons.FaSearch size={14} />
-                  </InputGroup.Text>
-                  <Form.Control
-                    type="text"
-                    placeholder={isRtl ? 'ابحث عن مكتب، إدارة، أو اسم مدير...' : 'Search offices, admins, or directors...'}
-                    value={treeSearchQuery}
-                    onChange={(e) => setTreeSearchQuery(e.target.value)}
-                    style={{ background: 'var(--card-bg)', border: 'none', color: 'var(--text)', boxShadow: 'none', fontSize: '0.9rem' }}
-                  />
-                  {treeSearchQuery && (
-                    <InputGroup.Text 
-                      onClick={() => setTreeSearchQuery('')}
-                      style={{ background: 'var(--card-bg)', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
-                    >
-                      <FaIcons.FaTimes size={12} />
-                    </InputGroup.Text>
-                  )}
-                </InputGroup>
-              </div>
-
-              {/* View Mode Toggle Switch (Interactive Scroll vs Full Grid) */}
-              {isLargeScreen && (
-                <div className="d-flex align-items-center gap-2 p-1 border rounded-pill bg-body-tertiary shadow-sm">
-                  <Button
-                    variant={viewMode === 'scroll' ? 'primary' : 'light'}
-                    size="sm"
-                    className="rounded-pill px-3 py-1 fw-bold fs-7 d-flex align-items-center gap-2"
-                    onClick={() => setViewMode('scroll')}
-                  >
-                    <FaIcons.FaMagic size={12} />
-                    <span>{isRtl ? 'عرض تفاعلي بالتمرير' : 'Scroll View'}</span>
-                  </Button>
-                  <Button
-                    variant={viewMode === 'grid' ? 'primary' : 'light'}
-                    size="sm"
-                    className="rounded-pill px-3 py-1 fw-bold fs-7 d-flex align-items-center gap-2"
-                    onClick={() => setViewMode('grid')}
-                  >
-                    <FaIcons.FaThLarge size={12} />
-                    <span>{isRtl ? 'عرض كلي شامل' : 'Full Map'}</span>
-                  </Button>
-                </div>
-              )}
-            </div>
-
             {/* Leadership Tree Content Outside Frame */}
-            {isLargeScreen && viewMode === 'scroll' ? (
-              /* --- Desktop Interactive Scroll-Driven Org Chart --- */
-              <div ref={treeContainerRef} style={{ position: 'relative', height: '200vh', marginTop: 10 }}>
-                <div style={{
-                  position: 'sticky',
-                  top: 85,
-                  height: 'auto',
-                  minHeight: '75vh',
-                  maxHeight: '85vh',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'flex-start',
-                  padding: '10px 0 15px',
-                  overflow: 'hidden'
-                }}>
-                  {/* Level 1: President Card */}
-                  {renderPresidentCard(pageData.leadership_tree.president)}
-
-                  {/* SVG Animated Branch Connector with Laser Line Pulse */}
-                  <div style={{ width: '100%', height: 30, position: 'relative', flexShrink: 0 }}>
-                    <svg width="100%" height="30" style={{ overflow: 'visible', pointerEvents: 'none' }}>
-                      <motion.path
-                        d="M 50% 0 L 50% 30"
-                        stroke="var(--primary)"
-                        strokeWidth="3"
-                        fill="none"
-                        initial={{ pathLength: 0 }}
-                        animate={{ pathLength: 1 }}
-                        transition={{ duration: 0.5 }}
-                      />
-                      <circle r="4" fill="#0ea5e9">
-                        <animateMotion path="M 50% 0 L 50% 30" dur="1.8s" repeatCount="indefinite" />
-                      </circle>
-                    </svg>
-                  </div>
-
-                  {/* Interactive Level Indicator Tabs (Scroll indicator + manual switch) */}
-                  <div className="d-flex align-items-center justify-content-center gap-3 mb-3" style={{ zIndex: 5 }}>
-                    <button
-                      type="button"
-                      onClick={() => setScrollState(1)}
-                      style={{
-                        background: scrollState < 2 ? 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)' : 'var(--card-bg)',
-                        color: scrollState < 2 ? '#fff' : 'var(--text-muted)',
-                        border: scrollState < 2 ? 'none' : '1px solid var(--border)',
-                        padding: '6px 22px',
-                        borderRadius: 99,
-                        fontWeight: 800,
-                        fontSize: '0.85rem',
-                        boxShadow: scrollState < 2 ? '0 4px 14px rgba(14,165,233,0.35)' : 'none',
-                        cursor: 'pointer',
-                        transition: 'all 0.3s ease',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 6
-                      }}
-                    >
-                      <FaIcons.FaBriefcase size={13} />
-                      <span>{isRtl ? 'المكاتب التابعة' : 'Offices'} ({filteredOffices.length})</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setScrollState(2)}
-                      style={{
-                        background: scrollState === 2 ? 'linear-gradient(135deg, #003087 0%, #001d5a 100%)' : 'var(--card-bg)',
-                        color: scrollState === 2 ? '#fff' : 'var(--text-muted)',
-                        border: scrollState === 2 ? 'none' : '1px solid var(--border)',
-                        padding: '6px 22px',
-                        borderRadius: 99,
-                        fontWeight: 800,
-                        fontSize: '0.85rem',
-                        boxShadow: scrollState === 2 ? '0 4px 14px rgba(0,48,135,0.35)' : 'none',
-                        cursor: 'pointer',
-                        transition: 'all 0.3s ease',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 6
-                      }}
-                    >
-                      <FaIcons.FaLandmark size={13} />
-                      <span>{isRtl ? 'الإدارات الرئيسية' : 'Administrations'} ({filteredAdmins.length})</span>
-                    </button>
-                  </div>
-
-                  {/* Level 2 & 3: Offices (scrollState < 2) → Administrations (scrollState === 2) */}
-                  <div className="w-100 px-3" style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-                    <AnimatePresence mode="wait">
-                      {/* Offices View */}
-                      {scrollState < 2 && (
-                        <motion.div
-                          key="offices-view"
-                          initial={{ opacity: 0, y: 30, scale: 0.98 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: -30, scale: 0.96 }}
-                          transition={{ duration: 0.35, ease: 'easeOut' }}
-                          className="w-100"
-                        >
-                          <div style={{
-                            maxHeight: '48vh',
-                            overflowY: 'auto',
-                            padding: '4px 8px'
-                          }} className="about-admin-scroll">
-                            {filteredOffices.length > 0 ? (
-                              <Row className="g-3 row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-3">
-                                {filteredOffices.map((o, i) => renderTreeCard(o, i, 'office'))}
-                              </Row>
-                            ) : (
-                              <div className="text-center py-5 text-muted fs-7">
-                                {isRtl ? 'لا توجد نتائج مطابقة للبحث' : 'No matching offices found'}
-                              </div>
-                            )}
-                          </div>
-                        </motion.div>
-                      )}
-
-                      {/* Administrations View */}
-                      {scrollState === 2 && (
-                        <motion.div
-                          key="admins-view"
-                          initial={{ opacity: 0, y: 30, scale: 0.98 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: -30, scale: 0.96 }}
-                          transition={{ duration: 0.35, ease: 'easeOut' }}
-                          className="w-100"
-                        >
-                          <div style={{
-                            maxHeight: '48vh',
-                            overflowY: 'auto',
-                            padding: '4px 8px'
-                          }} className="about-admin-scroll">
-                            {filteredAdmins.length > 0 ? (
-                              <Row className="g-3 row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-3">
-                                {filteredAdmins.map((a, i) => renderTreeCard(a, i, 'admin'))}
-                              </Row>
-                            ) : (
-                              <div className="text-center py-5 text-muted fs-7">
-                                {isRtl ? 'لا توجد نتائج مطابقة للبحث' : 'No matching administrations found'}
-                              </div>
-                            )}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                </div>
-              </div>
-            ) : viewMode === 'grid' && isLargeScreen ? (
-              /* --- Full Grid View (Shows everything at once) --- */
-              <div className="p-4 border rounded-4 bg-body-tertiary shadow-sm">
-                <div className="d-flex justify-content-center mb-5">
+            {isLargeScreen ? (
+              /* --- Desktop Org Chart Layout --- */
+              <div style={{ position: 'relative', marginTop: 10 }}>
+                {/* Level 1: President Card */}
+                <div className="d-flex justify-content-center mb-2">
                   {renderPresidentCard(pageData.leadership_tree.president)}
                 </div>
 
-                {/* Offices Section */}
-                <div className="mb-5">
-                  <h5 className="fw-extrabold mb-3 d-flex align-items-center gap-2 text-primary">
-                    <FaIcons.FaBriefcase size={16} />
-                    <span>{isRtl ? 'المكاتب التابعة لرئيس الهيئة' : 'Offices'} ({filteredOffices.length})</span>
-                  </h5>
-                  <Row className="g-3 row-cols-1 row-cols-md-2 row-cols-lg-3">
-                    {filteredOffices.map((o, i) => renderTreeCard(o, i, 'office'))}
-                  </Row>
+                {/* SVG Animated Branch Connector */}
+                <div style={{ width: '100%', height: 36, position: 'relative', flexShrink: 0, margin: '10px 0' }}>
+                  <svg width="100%" height="36" style={{ overflow: 'visible', pointerEvents: 'none' }}>
+                    <motion.path
+                      d="M 50% 0 L 50% 36"
+                      stroke="var(--primary)"
+                      strokeWidth="3"
+                      fill="none"
+                      initial={{ pathLength: 0 }}
+                      animate={{ pathLength: 1 }}
+                      transition={{ duration: 0.5 }}
+                    />
+                    <circle r="4" fill="#0ea5e9">
+                      <animateMotion path="M 50% 0 L 50% 36" dur="2s" repeatCount="indefinite" />
+                    </circle>
+                  </svg>
                 </div>
 
-                {/* Administrations Section */}
-                <div>
-                  <h5 className="fw-extrabold mb-3 d-flex align-items-center gap-2 text-primary">
-                    <FaIcons.FaLandmark size={16} />
-                    <span>{isRtl ? 'الإدارات الرئيسية للهيئة' : 'Administrations'} ({filteredAdmins.length})</span>
-                  </h5>
-                  <Row className="g-3 row-cols-1 row-cols-md-2 row-cols-lg-3">
-                    {filteredAdmins.map((a, i) => renderTreeCard(a, i, 'admin'))}
-                  </Row>
-                </div>
+                {/* Level 2: Offices Section (7 offices) */}
+                {(pageData.leadership_tree.offices || []).length > 0 && (
+                  <div className="mb-5">
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      marginBottom: 20,
+                      direction: isRtl ? 'rtl' : 'ltr',
+                    }}>
+                      <div style={{
+                        width: 40, height: 40, borderRadius: 12, flexShrink: 0,
+                        background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        boxShadow: '0 4px 12px rgba(14,165,233,0.35)',
+                      }}>
+                        <FaIcons.FaBriefcase size={17} color="#fff" />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{
+                          fontSize: '1.08rem', fontWeight: 800,
+                          background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
+                          WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                          lineHeight: 1.2,
+                        }}>
+                          {isRtl ? 'المكاتب التابعة لرئيس الهيئة' : 'Offices Reporting to Head'}
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                          {isRtl
+                            ? `${(pageData.leadership_tree.offices || []).length} مكتب`
+                            : `${(pageData.leadership_tree.offices || []).length} offices`}
+                        </div>
+                      </div>
+                      <div style={{
+                        height: 2, flex: 2,
+                        background: 'linear-gradient(90deg, rgba(14,165,233,0.4) 0%, transparent 100%)',
+                        borderRadius: 99,
+                      }} />
+                    </div>
+                    <Row className="g-3 row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-3">
+                      {(pageData.leadership_tree.offices || []).map((o, i) => renderTreeCard(o, i, 'office'))}
+                    </Row>
+                  </div>
+                )}
+
+                {/* Level 3: Main Administrations Section */}
+                {(pageData.leadership_tree.administrations || []).length > 0 && (
+                  <div className="mb-4">
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      marginBottom: 20,
+                      direction: isRtl ? 'rtl' : 'ltr',
+                    }}>
+                      <div style={{
+                        width: 40, height: 40, borderRadius: 12, flexShrink: 0,
+                        background: 'linear-gradient(135deg, #003087 0%, #001d5a 100%)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        boxShadow: '0 4px 12px rgba(0,48,135,0.35)',
+                      }}>
+                        <FaIcons.FaLandmark size={17} color="#fff" />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{
+                          fontSize: '1.08rem', fontWeight: 800,
+                          background: 'linear-gradient(135deg, #003087 0%, #001d5a 100%)',
+                          WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                          lineHeight: 1.2,
+                        }}>
+                          {isRtl ? 'الإدارات الرئيسية للهيئة' : 'Main Administrations'}
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                          {isRtl
+                            ? `${(pageData.leadership_tree.administrations || []).length} إدارة`
+                            : `${(pageData.leadership_tree.administrations || []).length} administrations`}
+                        </div>
+                      </div>
+                      <div style={{
+                        height: 2, flex: 2,
+                        background: 'linear-gradient(90deg, rgba(0,48,135,0.4) 0%, transparent 100%)',
+                        borderRadius: 99,
+                      }} />
+                    </div>
+                    <Row className="g-3 row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-3">
+                      {(pageData.leadership_tree.administrations || []).map((a, i) => renderTreeCard(a, i, 'admin'))}
+                    </Row>
+                  </div>
+                )}
               </div>
             ) : (
               /* --- Mobile Tabbed Org Chart --- */
@@ -1084,7 +880,7 @@ const About = () => {
                     onClick={() => setMobileActiveLevel('offices')}
                   >
                     <FaIcons.FaBriefcase size={14} />
-                    <span>{isRtl ? 'المكاتب التابعة' : 'Offices'} ({filteredOffices.length})</span>
+                    <span>{isRtl ? 'المكاتب التابعة' : 'Offices'} ({(pageData.leadership_tree.offices || []).length})</span>
                   </Button>
                   <Button
                     variant={mobileActiveLevel === 'admins' ? 'primary' : 'outline-secondary'}
@@ -1092,7 +888,7 @@ const About = () => {
                     onClick={() => setMobileActiveLevel('admins')}
                   >
                     <FaIcons.FaLandmark size={14} />
-                    <span>{isRtl ? 'الإدارات' : 'Administrations'} ({filteredAdmins.length})</span>
+                    <span>{isRtl ? 'الإدارات' : 'Administrations'} ({(pageData.leadership_tree.administrations || []).length})</span>
                   </Button>
                 </div>
 
@@ -1100,11 +896,11 @@ const About = () => {
                 <div className="px-1 pb-3">
                   {mobileActiveLevel === 'offices' ? (
                     <Row className="g-3 row-cols-1 row-cols-sm-2">
-                      {filteredOffices.map((o, i) => renderTreeCard(o, i, 'office'))}
+                      {(pageData.leadership_tree.offices || []).map((o, i) => renderTreeCard(o, i, 'office'))}
                     </Row>
                   ) : (
                     <Row className="g-3 row-cols-1 row-cols-sm-2">
-                      {filteredAdmins.map((a, i) => renderTreeCard(a, i, 'admin'))}
+                      {(pageData.leadership_tree.administrations || []).map((a, i) => renderTreeCard(a, i, 'admin'))}
                     </Row>
                   )}
                 </div>
